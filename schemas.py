@@ -313,15 +313,22 @@ class SaleItem(BaseModel):
     quantity: int
     revenue: float
 
+class TicketSaleDetail(BaseModel):
+    type: str
+    price: float
+    quantity_sold: int
+    revenue: float
+
 class SalesData(BaseModel):
     total_revenue: float
+    tickets_sold: List[TicketSaleDetail]
     items_sold: List[SaleItem]
 
 class EventDetailsResponse(BaseModel):
-    id: int
+    id: str
     name: str
-    date: datetime
-    time: datetime
+    date: str
+    time: str
     location: str
     status: str
     sales: SalesData
@@ -348,3 +355,26 @@ class EventRevenueRanking(BaseModel):
 
 class RevenueRankingResponse(BaseModel):
     events: List[EventRevenueRanking]
+
+class TicketSales(BaseModel):
+    total_revenue: float
+    details: List[TicketSaleDetail]
+
+class ItemSaleDetail(BaseModel):
+    type: str
+    price: float
+    quantity_sold: int
+    revenue: float
+
+class ItemSales(BaseModel):
+    total_revenue: float
+    details: List[ItemSaleDetail]
+
+class EventClosingResponse(BaseModel):
+    event_id: str
+    event_name: str
+    status: str
+    closed_at: datetime
+    financial_summary: dict  # Contains ticket_revenue, item_revenue, total_revenue
+    ticket_sales: TicketSales
+    item_sales: ItemSales
