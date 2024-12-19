@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import uuid
 import models, schemas
 from database import get_db
 from datetime import datetime
-from fastapi import Response
-from sqlalchemy.sql.expression import extract
 
 router = APIRouter()
 
@@ -145,9 +144,7 @@ def sell_tickets(
         id=str(uuid.uuid4()),
         ticket_id=sale.ticket_id,
         quantity=sale.quantity,
-        total_amount=total_amount,
-        customer_email=sale.customer_email,
-        customer_name=sale.customer_name
+        total_amount=total_amount
     )
 
     db.add(db_ticket_sale)
@@ -160,8 +157,6 @@ def sell_tickets(
         "ticket_id": db_ticket_sale.ticket_id,
         "quantity": db_ticket_sale.quantity,
         "total_amount": db_ticket_sale.total_amount,
-        "customer_email": db_ticket_sale.customer_email,
-        "customer_name": db_ticket_sale.customer_name,
         "created_at": db_ticket_sale.created_at,
         "ticket_type": ticket.type,
         "event_name": event.name

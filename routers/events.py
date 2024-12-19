@@ -82,7 +82,7 @@ def cancel_event(
 def reschedule_event(
         event_id: str,
         new_schedule: dict,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
 ):
     db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not db_event:

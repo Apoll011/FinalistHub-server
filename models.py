@@ -108,8 +108,6 @@ class TicketSale(Base):
     ticket_id = Column(String, ForeignKey("tickets.id"))
     quantity = Column(Integer)
     total_amount = Column(Float)
-    customer_email = Column(String, nullable=True)
-    customer_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     ticket = relationship("Ticket", backref="sales")

@@ -69,8 +69,6 @@ class Sale(SaleCreate):
 class TicketSaleBase(BaseModel):
     ticket_id: str
     quantity: int
-    customer_email: Optional[str] = None
-    customer_name: Optional[str] = None
 
 class TicketSaleCreate(TicketSaleBase):
     pass
@@ -84,3 +82,53 @@ class TicketSale(TicketSaleBase):
 
     class Config:
         orm_mode = True
+
+class FinancialTransactionBase(BaseModel):
+    description: str
+    amount: float
+
+class FinancialTransaction(FinancialTransactionBase):
+    id: str
+    type: str  # 'revenue' or 'expense'
+    timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+class Balance(BaseModel):
+    current_balance: float
+    last_updated: datetime
+
+class FinancialReport(BaseModel):
+    total_revenue: float
+    total_expenses: float
+    net_income: float
+    transactions: List[FinancialTransaction]
+
+class MonthlyFinancialReport(FinancialReport):
+    month: str  # Format 'YYYY-MM'
+
+class MeetingBase(BaseModel):
+    date: str
+    time: str
+    location: str
+    agenda: str
+
+class MeetingCreate(MeetingBase):
+    pass
+
+class Meeting(MeetingBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+class MeetingList(BaseModel):
+    meetings: List[Meeting]
+
+class MeetingMinutes(BaseModel):
+    id: str
+    meeting_id: str
+    file_name: str
+    file_size: int
+    uploaded_at: datetime

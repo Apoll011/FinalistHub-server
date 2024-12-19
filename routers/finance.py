@@ -9,7 +9,7 @@ from sqlalchemy.sql.expression import extract
 
 router = APIRouter()
 
-@router.post("/revenue")
+@router.post("/revenue", response_model=schemas.FinancialTransaction)
 def add_revenue(
         description: str,
         amount: float,
@@ -26,7 +26,24 @@ def add_revenue(
     db.refresh(transaction)
     return transaction
 
-@router.get("/balance")
+@router.post("/expenses", response_model=schemas.FinancialTransaction)
+def add_expenses(
+        description: str,
+        amount: float,
+        db: Session = Depends(get_db)
+):
+    transaction = models.Transaction(
+        id=str(uuid.uuid4()),
+        type="expenses",
+        description=description,
+        amount=amount
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+@router.get("/balance", response_model=schemas.Balance)
 def get_balance(db: Session = Depends(get_db)):
     revenue = db.query(models.Transaction).filter(
         models.Transaction.type == "revenue"
@@ -41,10 +58,17 @@ def get_balance(db: Session = Depends(get_db)):
         "last_updated": datetime.utcnow()
     }
 
-@router.get("/transactions")
+@router.get("/transactions", response_model=schemas.FinancialReport)
 def get_transactions(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+    transactions = db.query(models.Transaction) \
+        .all()
+
+    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
+    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
     return {
+        "totalRevenue": total_revenue,
+        "totalExpenses": total_expenses,
+        "netIncome": total_revenue - total_expenses,
         "transactions": [
             {
                 "id": t.id,
@@ -56,7 +80,7 @@ def get_transactions(db: Session = Depends(get_db)):
         ]
     }
 
-@router.get("/transactions/monthly")
+@router.get("/transactions/monthly", response_model=schemas.MonthlyFinancialReport)
 def get_monthly_transactions(db: Session = Depends(get_db)):
     current_month = datetime.utcnow().strftime("%Y-%m")
 

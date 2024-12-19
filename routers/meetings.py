@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 import uuid
 import base64
 import models
+import schemas
 from database import get_db
 from datetime import datetime
 from fastapi import Response
-from sqlalchemy.sql.expression import extract
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("/", response_model=schemas.Meeting)
 def create_meeting(
         date: str,
         time: str,
@@ -30,7 +30,7 @@ def create_meeting(
     db.refresh(meeting)
     return meeting
 
-@router.post("/{meeting_id}/minutes")
+@router.post("/{meeting_id}/minutes", response_model=schemas.MeetingMinutes)
 async def upload_minutes(
         meeting_id: str,
         file: UploadFile = File(...),
@@ -57,7 +57,7 @@ async def upload_minutes(
         "uploaded_at": minutes.uploaded_at
     }
 
-@router.patch("/{meeting_id}")
+@router.patch("/{meeting_id}", response_model=schemas.Meeting)
 def update_meeting(
         meeting_id: str,
         meeting_data: dict,
@@ -70,7 +70,7 @@ def update_meeting(
     for key, value in meeting_data.items():
         setattr(db_meeting, key, value)
 
-    db_meeting.updated_at = datetime.utcnow()
+    db_meeting.created_at = datetime.utcnow()
     db.commit()
 
     return {
@@ -78,7 +78,7 @@ def update_meeting(
         "date": db_meeting.date,
         "time": db_meeting.time,
         "agenda": db_meeting.agenda,
-        "updatedAt": db_meeting.updated_at
+        "location": db_meeting.location
     }
 
 @router.delete("/{meeting_id}")
@@ -94,7 +94,7 @@ def delete_meeting(
     db.commit()
     return Response(status_code=204)
 
-@router.get("/upcoming")
+@router.get("/upcoming", response_model=schemas.MeetingList)
 def get_upcoming_meetings(db: Session = Depends(get_db)):
     current_date = datetime.utcnow().strftime("%Y-%m-%d")
 
