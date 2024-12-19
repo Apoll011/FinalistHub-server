@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import uuid
 import models, schemas
 from database import get_db
@@ -29,11 +30,11 @@ def add_revenue(
 def get_balance(db: Session = Depends(get_db)):
     revenue = db.query(models.Transaction).filter(
         models.Transaction.type == "revenue"
-    ).with_entities(sum(models.Transaction.amount)).scalar() or 0
+    ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
 
     expenses = db.query(models.Transaction).filter(
         models.Transaction.type == "expense"
-    ).with_entities(sum(models.Transaction.amount)).scalar() or 0
+    ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
 
     return {
         "current_balance": revenue - expenses,

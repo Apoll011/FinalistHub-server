@@ -98,3 +98,16 @@ class MeetingMinutes(Base):
     file_data = Column(Text)  # Store as base64 encoded string
 
     meeting = relationship("Meeting", back_populates="minutes")
+
+class TicketSale(Base):
+    __tablename__ = "ticket_sales"
+
+    id = Column(String, primary_key=True)
+    ticket_id = Column(String, ForeignKey("tickets.id"))
+    quantity = Column(Integer)
+    total_amount = Column(Float)
+    customer_email = Column(String, nullable=True)
+    customer_name = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    ticket = relationship("Ticket", backref="sales")

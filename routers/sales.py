@@ -46,7 +46,6 @@ def sell_custom_item(
 
     db_sale = models.Sale(
         id=str(uuid.uuid4()),
-        name=item_data["name"],
         price=item_data["price"],
         quantity_sold=item_data["quantitySold"],
         total_revenue=total_revenue
@@ -107,4 +106,138 @@ def get_receipt(
         "totalSales": total_sales,
         "itemsSold": items_sold,
         "timestamp": datetime.utcnow()
+    }
+
+@router.post("/tickets", response_model=schemas.TicketSale)
+def sell_tickets(
+    sale: schemas.TicketSaleCreate,
+    db: Session = Depends(get_db)
+):
+    # Get the ticket
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == sale.ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Get the event to check if it's still active
+    event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    # Check if event is still active
+    if event.status != "active":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot sell tickets for {event.status} event"
+        )
+
+    # Check if ticket is still available
+    if not ticket.available:
+        raise HTTPException(
+            status_code=400,
+            detail="Tickets are no longer available for sale"
+        )
+
+    # Calculate total amount
+    total_amount = ticket.price * sale.quantity
+
+    # Create the ticket sale
+    db_ticket_sale = models.TicketSale(
+        id=str(uuid.uuid4()),
+        ticket_id=sale.ticket_id,
+        quantity=sale.quantity,
+        total_amount=total_amount,
+        customer_email=sale.customer_email,
+        customer_name=sale.customer_name
+    )
+
+    db.add(db_ticket_sale)
+    db.commit()
+    db.refresh(db_ticket_sale)
+
+    # Return formatted response
+    return {
+        "id": db_ticket_sale.id,
+        "ticket_id": db_ticket_sale.ticket_id,
+        "quantity": db_ticket_sale.quantity,
+        "total_amount": db_ticket_sale.total_amount,
+        "customer_email": db_ticket_sale.customer_email,
+        "customer_name": db_ticket_sale.customer_name,
+        "created_at": db_ticket_sale.created_at,
+        "ticket_type": ticket.type,
+        "event_name": event.name
+    }
+
+@router.get("/tickets/{event_id}/availability")
+def check_ticket_availability(
+    event_id: str,
+    db: Session = Depends(get_db)
+):
+    # Get all tickets for the event
+    tickets = db.query(models.Ticket)\
+        .filter(models.Ticket.event_id == event_id)\
+        .all()
+
+    if not tickets:
+        raise HTTPException(
+            status_code=404,
+            detail="No tickets found for this event"
+        )
+
+    # Get sales information for each ticket type
+    availability = []
+    for ticket in tickets:
+        total_sold = db.query(func.sum(models.TicketSale.quantity))\
+            .filter(models.TicketSale.ticket_id == ticket.id)\
+            .scalar() or 0
+
+        availability.append({
+            "ticket_id": ticket.id,
+            "ticket_type": ticket.type,
+            "price": ticket.price,
+            "available": ticket.available,
+            "total_sold": total_sold
+        })
+
+    return {"tickets": availability}
+
+@router.get("/tickets/sales-history/{event_id}")
+def get_ticket_sales_history(
+    event_id: str,
+    db: Session = Depends(get_db)
+):
+    # Get all ticket sales for the event
+    sales = db.query(models.TicketSale)\
+        .join(models.Ticket)\
+        .filter(models.Ticket.event_id == event_id)\
+        .all()
+
+    if not sales:
+        return {
+            "event_id": event_id,
+            "total_sales": 0,
+            "total_revenue": 0,
+            "sales": []
+        }
+
+    # Format sales data
+    sales_data = []
+    total_revenue = 0
+
+    for sale in sales:
+        sales_data.append({
+            "sale_id": sale.id,
+            "ticket_type": sale.ticket.type,
+            "quantity": sale.quantity,
+            "total_amount": sale.total_amount,
+            "customer_name": sale.customer_name,
+            "customer_email": sale.customer_email,
+            "purchase_date": sale.created_at
+        })
+        total_revenue += sale.total_amount
+
+    return {
+        "event_id": event_id,
+        "total_sales": len(sales),
+        "total_revenue": total_revenue,
+        "sales": sales_data
     }

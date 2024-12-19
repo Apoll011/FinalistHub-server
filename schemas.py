@@ -65,3 +65,22 @@ class Sale(SaleCreate):
 
     class Config:
         orm_mode = True
+
+class TicketSaleBase(BaseModel):
+    ticket_id: str
+    quantity: int
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
+
+class TicketSaleCreate(TicketSaleBase):
+    pass
+
+class TicketSale(TicketSaleBase):
+    id: str
+    total_amount: float
+    created_at: datetime
+    ticket_type: str
+    event_name: str
+
+    class Config:
+        orm_mode = True
