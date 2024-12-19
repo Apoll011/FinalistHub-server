@@ -402,7 +402,7 @@ def get_trending_events(
         ]
     }
 
-@router.get("/revenue-ranking")
+@router.get("/revenue-ranking", response_model=schemas.RevenueRankingResponse)
 def get_event_revenue_ranking(
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,

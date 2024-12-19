@@ -337,3 +337,14 @@ class CancelEventResponse(BaseModel):
     id: int
     status: str
     cancelledAt: datetime
+
+class EventRevenueRanking(BaseModel):
+    id: int
+    name: str
+    date: str
+    ticket_revenue: float
+    item_revenue: float
+    total_revenue: float
+
+class RevenueRankingResponse(BaseModel):
+    events: List[EventRevenueRanking]
