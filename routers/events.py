@@ -553,7 +553,7 @@ def get_attendance_forecast(
         "historical_data": [{"date": data.date, "count": data.count} for data in historical_data],
     }
 
-@router.post("/{event_id}/close")
+@router.post("/{event_id}/close" , response_model=schemas.EventClosingResponse)
 def close_event(
         event_id: str,
         db: Session = Depends(get_db)
