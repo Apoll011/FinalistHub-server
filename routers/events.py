@@ -79,7 +79,7 @@ def cancel_event(
         "cancelledAt": db_event.closed_at
     }
 
-@router.patch("/{event_id}/reschedule", response_model=RescheduleEventResponse)
+@router.patch("/{event_id}/reschedule", response_model=schemas.RescheduleEventResponse)
 def reschedule_event(
         event_id: str,
         new_schedule: dict,
