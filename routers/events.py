@@ -37,6 +37,16 @@ def create_ticket(
     db.refresh(db_ticket)
     return db_ticket
 
+@router.get("/{event_id}/", response_model=schemas.Event)
+def get_event_data(
+    event_id: str,
+    db: Session = Depends(get_db)
+):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
+
+    return db_event
+
+
 @router.get("/calendar", response_model=List[schemas.Event])
 def get_calendar(db: Session = Depends(get_db)):
     return db.query(models.Event).all()
