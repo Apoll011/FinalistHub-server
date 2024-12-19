@@ -280,7 +280,7 @@ class EventTrendingResponse(BaseModel):
     trending_events: List[TrendingEvent]
 
 class CapacityAnalysisEvent(BaseModel):
-    event_id: int
+    event_id: str
     name: str
     date: str
     tickets_sold: int
@@ -325,7 +325,7 @@ class EventDetailsResponse(BaseModel):
     location: str
     status: str
     sales: SalesData
-    observations: List[ObservationInput] = []
+    observations: List[ObservationInput]
 
 class RescheduleEventResponse(BaseModel):
     id: int
