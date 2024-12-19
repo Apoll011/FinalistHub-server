@@ -14,6 +14,7 @@ class Event(Base):
     description = Column(Text)
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
 
     tickets = relationship("Ticket", back_populates="event")
     items = relationship("Item", back_populates="event")
@@ -73,6 +74,7 @@ class Transaction(Base):
     description = Column(Text)
     amount = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    event_id = Column(String, ForeignKey("events.id"), nullable=True)
 
 class Meeting(Base):
     __tablename__ = "meetings"
