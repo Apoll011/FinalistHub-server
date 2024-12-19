@@ -36,6 +36,13 @@ class Ticket(TicketBase):
     class Config:
         orm_mode = True
 
+class PriceQuantity(BaseModel):
+    quantity: int
+    price: float
+
+    class Config:
+        orm_mode = True
+
 class ItemBase(BaseModel):
     name: str
     quantity: int
@@ -52,6 +59,12 @@ class Item(ItemBase):
     class Config:
         orm_mode = True
 
+class ItemCustom(ItemBase):
+    id: str
+    quantity_sold: int
+    total_revenue: float
+    timestamp: datetime
+
 class SaleBase(BaseModel):
     quantity_sold: int
 
@@ -62,6 +75,50 @@ class Sale(SaleCreate):
     id: str
     total_revenue: float
     timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+class ItemSold(BaseModel):
+    name: str
+    quantity: int
+    unit_price: float
+    total_price: float
+
+class SalesSummaryResponse(BaseModel):
+    event_id: str
+    total_sales: float
+    items_sold: List[ItemSold]
+    timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+class TicketAvailability(BaseModel):
+    ticket_id: str
+    ticket_type: str
+    price: float
+    available: bool
+    total_sold: int
+
+class TicketAvailabilityResponse(BaseModel):
+    tickets: List[TicketAvailability]
+
+    class Config:
+        orm_mode = True
+
+class TicketSaleHistory(BaseModel):
+    sale_id: str
+    ticket_type: str
+    quantity: int
+    total_amount: float
+    purchase_date: datetime
+
+class TicketSalesHistoryResponse(BaseModel):
+    event_id: str
+    total_sales: int
+    total_revenue: float
+    sales: List[TicketSaleHistory]
 
     class Config:
         orm_mode = True
@@ -132,3 +189,151 @@ class MeetingMinutes(BaseModel):
     file_name: str
     file_size: int
     uploaded_at: datetime
+
+class ItemResponse(BaseModel):
+    name: str
+    total_quantity: int
+    total_revenue: float
+
+class TopItemsResponse(BaseModel):
+    items: list[ItemResponse]
+
+class HourlyBreakdownResponse(BaseModel):
+    hour: int
+    revenue: float
+    transactions: int
+
+class SalesResponse(BaseModel):
+    date: datetime
+    hourly_breakdown: list[HourlyBreakdownResponse]
+
+class BulkSaleResponse(BaseModel):
+    total_revenue: float
+    sales_count: int
+
+
+class LowStockItemResponse(BaseModel):
+    id: int
+    name: str
+    current_quantity: int
+    price: float
+
+class InventoryAlertResponse(BaseModel):
+    low_stock_items: List[LowStockItemResponse]
+
+class RevenueSourceResponse(BaseModel):
+    description: str
+    total_amount: float
+    transaction_count: int
+
+class TopRevenueSourcesResponse(BaseModel):
+    sources: List[RevenueSourceResponse]
+
+class Period(BaseModel):
+    year: int
+    month: int
+
+class ProfitReportResponse(BaseModel):
+    period: Period
+    total_revenue: float
+    total_expenses: float
+    net_profit: float
+    profit_margin: float
+
+class DailyBreakdown(BaseModel):
+    date: str  # using str for date formatting
+    revenue: float
+
+class DailyRevenueResponse(BaseModel):
+    daily_breakdown: List[DailyBreakdown]
+
+class DateRange(BaseModel):
+    start: str
+    end: str
+
+class EventStatisticsResponse(BaseModel):
+    total_events: int
+    active_events: int
+    closed_events: int
+    cancelled_events: int
+    total_revenue: float
+    date_range: DateRange
+
+
+class DuplicateEventResponse(BaseModel):
+    new_event_id: int
+    name: str
+    date: str
+    time: datetime
+
+class SearchEventsResponse(BaseModel):
+    total_results: int
+    events: List[Event]
+
+class TrendingEvent(BaseModel):
+    id: int
+    name: str
+    date: str
+    ticket_sales: int
+
+class EventTrendingResponse(BaseModel):
+    trending_events: List[TrendingEvent]
+
+class CapacityAnalysisEvent(BaseModel):
+    event_id: int
+    name: str
+    date: str
+    tickets_sold: int
+    status: str
+
+class CapacityAnalysisResponse(BaseModel):
+    capacity_analysis: List[CapacityAnalysisEvent]
+
+class HistoricalData(BaseModel):
+    date: str
+    count: int
+
+class EventForecastResponse(BaseModel):
+    event_id: int
+    current_sales: int
+    predicted_attendance: int
+    historical_data: List[HistoricalData]
+
+class ObservationResponse(BaseModel):
+    id: int
+    eventId: int
+    content: str
+    createdAt: datetime
+
+class ObservationInput(BaseModel):
+    content: str
+
+class SaleItem(BaseModel):
+    name: str
+    quantity: int
+    revenue: float
+
+class SalesData(BaseModel):
+    total_revenue: float
+    items_sold: List[SaleItem]
+
+class EventDetailsResponse(BaseModel):
+    id: int
+    name: str
+    date: datetime
+    time: datetime
+    location: str
+    status: str
+    sales: SalesData
+    observations: List[ObservationInput] = []
+
+class RescheduleEventResponse(BaseModel):
+    id: int
+    date: datetime
+    time: datetime
+
+
+class CancelEventResponse(BaseModel):
+    id: int
+    status: str
+    cancelledAt: datetime

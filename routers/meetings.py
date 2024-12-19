@@ -60,7 +60,7 @@ async def upload_minutes(
 @router.patch("/{meeting_id}", response_model=schemas.Meeting)
 def update_meeting(
         meeting_id: str,
-        meeting_data: dict,
+        meeting_data: schemas.MeetingBase,
         db: Session = Depends(get_db)
 ):
     db_meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
@@ -110,7 +110,6 @@ def get_upcoming_meetings(db: Session = Depends(get_db)):
                 "time": m.time,
                 "location": m.location,
                 "agenda": m.agenda,
-                "status": m.status
             } for m in meetings
         ]
     }
