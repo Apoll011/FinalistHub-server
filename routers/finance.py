@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 import uuid
-from .. import models, schemas
-from ..database import get_db
+import models, schemas
+from database import get_db
+from datetime import datetime
+from sqlalchemy.sql.expression import extract
 
 router = APIRouter()
 
@@ -28,13 +29,57 @@ def add_revenue(
 def get_balance(db: Session = Depends(get_db)):
     revenue = db.query(models.Transaction).filter(
         models.Transaction.type == "revenue"
-    ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
+    ).with_entities(sum(models.Transaction.amount)).scalar() or 0
 
     expenses = db.query(models.Transaction).filter(
         models.Transaction.type == "expense"
-    ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
+    ).with_entities(sum(models.Transaction.amount)).scalar() or 0
 
     return {
         "current_balance": revenue - expenses,
         "last_updated": datetime.utcnow()
+    }
+
+@router.get("/transactions")
+def get_transactions(db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).all()
+    return {
+        "transactions": [
+            {
+                "id": t.id,
+                "type": t.type,
+                "description": t.description,
+                "amount": t.amount,
+                "timestamp": t.timestamp
+            } for t in transactions
+        ]
+    }
+
+@router.get("/transactions/monthly")
+def get_monthly_transactions(db: Session = Depends(get_db)):
+    current_month = datetime.utcnow().strftime("%Y-%m")
+
+    # Get all transactions for current month
+    transactions = db.query(models.Transaction) \
+        .filter(extract('year', models.Transaction.timestamp) == datetime.utcnow().year) \
+        .filter(extract('month', models.Transaction.timestamp) == datetime.utcnow().month) \
+        .all()
+
+    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
+    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
+
+    return {
+        "month": current_month,
+        "totalRevenue": total_revenue,
+        "totalExpenses": total_expenses,
+        "netIncome": total_revenue - total_expenses,
+        "transactions": [
+            {
+                "id": t.id,
+                "type": t.type,
+                "description": t.description,
+                "amount": t.amount,
+                "timestamp": t.timestamp
+            } for t in transactions
+        ]
     }

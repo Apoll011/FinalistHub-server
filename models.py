@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from .database import Base
+from database import Base
 
 class Event(Base):
     __tablename__ = "events"
@@ -35,7 +35,7 @@ class Item(Base):
     __tablename__ = "items"
 
     id = Column(String, primary_key=True)
-    event_id = Column(String, ForeignKey("events.id", nullable=True))
+    event_id = Column(String, ForeignKey("events.id"), nullable=True)
     name = Column(String)
     quantity = Column(Integer)
     price = Column(Float)

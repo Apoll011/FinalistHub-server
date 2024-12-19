@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine
-from . import models
-from .routers import events, sales, finance, meetings
+from database import engine
+from models import Base
+from routers import events, sales, finance, meetings
 
 app = FastAPI(title="Events Management API")
 
@@ -14,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app.include_router(events.router, prefix="/events", tags=["Events"])
 app.include_router(sales.router, prefix="/sales", tags=["Sales"])
