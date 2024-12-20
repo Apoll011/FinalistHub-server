@@ -35,7 +35,7 @@ def add_expenses(
 ):
     transaction = models.Transaction(
         id=str(uuid.uuid4()),
-        type="expenses",
+        type="expense",
         description=description,
         amount=amount
     )
@@ -146,8 +146,8 @@ def get_top_revenue_sources(
 
 @router.get("/daily-revenue", response_model=schemas.DailyRevenueResponse)
 def get_daily_revenue(
-        start_date: str,
-        end_date: str,
+        start_date: str = datetime.now().strftime("%Y-%m-%d"),
+        end_date: str = datetime.now().strftime("%Y-%m-%d"),
         db: Session = Depends(get_db)
 ):
     """Get daily revenue breakdown"""
