@@ -37,6 +37,49 @@ def create_ticket(
     db.refresh(db_ticket)
     return db_ticket
 
+@router.delete("/{event_id}/tickets", status_code=204)
+def delete_ticket(
+    event_id: str,
+    ticket_id: str,
+    db: Session = Depends(get_db)
+):
+    # Fetch the ticket from the database
+    db_ticket = db.query(models.Ticket).filter(
+        models.Ticket.id == ticket_id,
+        models.Ticket.event_id == event_id
+    ).first()
+
+    # Check if the ticket exists
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Delete the ticket
+    db.delete(db_ticket)
+    db.commit()
+
+    # Return no content response
+    return None
+
+@router.patch("/{ticket_id}/available", response_model=schemas.AvailableResponse)
+def change_availability(
+        ticket_id: str,
+        available: bool,
+        db: Session = Depends(get_db),
+):
+    db_ticket = db.query(models.Ticket).filter(
+            models.Ticket.id == ticket_id,
+        ).first()
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+    db_ticket.available = available
+    db.commit()
+
+    return {
+        "available": available,
+    }
+
 @router.get("/{event_id}/", response_model=schemas.Event)
 def get_event_data(
     event_id: str,
@@ -71,6 +114,22 @@ def add_event_items(
     db.refresh(db_item)
     return db_item
 
+@router.delete("/{event_id}/items", status_code=204)
+def delete_item(
+    event_id: str,
+    item_id: str,
+    db: Session = Depends(get_db)
+):
+    db_item = db.query(models.Item).filter(models.Item.id == sale.item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    db.delete(db_item)
+    db.commit()
+
+    # Return no content response
+    return None
+
 @router.patch("/{event_id}/cancel", response_model=schemas.CancelEventResponse)
 def cancel_event(
         event_id: str,
@@ -89,18 +148,38 @@ def cancel_event(
         "cancelledAt": db_event.closed_at
     }
 
+
+@router.patch("/{event_id}/reopen", response_model=schemas.ReopenEventResponse)
+def reopen_event(
+        event_id: str,
+        db: Session = Depends(get_db)
+):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    db_event.status = "active"
+    db_event.closed_at = datetime.utcnow()
+    db.commit()
+    return {
+        "id": db_event.id,
+        "status": "active",
+    }
+
+
 @router.patch("/{event_id}/reschedule", response_model=schemas.RescheduleEventResponse)
 def reschedule_event(
         event_id: str,
-        new_schedule: dict,
+        new_schedule: schemas.DateInput,
         db: Session = Depends(get_db),
 ):
     db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    db_event.date = new_schedule.get("date")
-    db_event.time = new_schedule.get("time")
+
+    db_event.date = new_schedule.date
+    db_event.time = new_schedule.time
     db.commit()
 
     return {
@@ -179,7 +258,7 @@ def get_event_details(
         "location": db_event.location,
         "status": db_event.status,
         "sales": {
-            "total_revenue": total_revenue + tickes_sales,
+            "total_revenue": total_revenue + ticket_revenue,
             "tickets_sold": ticket_summary,
             "items_sold": items_sold
         },
@@ -199,7 +278,7 @@ def add_observation(
     db_observation = models.Observation(
         id=str(uuid.uuid4()),
         event_id=event_id,
-        content=observation.get("content")
+        content=observation.content
     )
     db.add(db_observation)
     db.commit()
@@ -553,14 +632,13 @@ def get_attendance_forecast(
         "historical_data": [{"date": data.date, "count": data.count} for data in historical_data],
     }
 
-@router.post("/{event_id}/close" , response_model=schemas.EventClosingResponse)
+@router.post("/{event_id}/close" , status_code=204)
 def close_event(
         event_id: str,
         db: Session = Depends(get_db)
 ):
     # Start database transaction
     try:
-        # 1. Get the event and verify it's active
         event = db.query(models.Event).filter(models.Event.id == event_id).first()
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
@@ -571,7 +649,6 @@ def close_event(
                 detail=f"Cannot close event that is already {event.status}"
             )
 
-        # 2. Calculate ticket sales revenue
         ticket_sales = db.query(
             func.sum(models.TicketSale.total_amount).label('total')
         ).join(
@@ -582,7 +659,6 @@ def close_event(
 
         ticket_revenue = ticket_sales.total or 0
 
-        # 3. Calculate item sales revenue
         item_sales = db.query(
             func.sum(models.Sale.total_revenue).label('total')
         ).join(
@@ -593,7 +669,6 @@ def close_event(
 
         item_revenue = item_sales.total or 0
 
-        # 4. Create financial transactions for the revenues
         if ticket_revenue > 0:
             ticket_transaction = models.Transaction(
                 id=str(uuid.uuid4()),
@@ -614,82 +689,109 @@ def close_event(
             )
             db.add(item_transaction)
 
-        # 5. Update event status
         event.status = "closed"
         event.closed_at = datetime.utcnow()
-
-        # 6. Generate financial summary
-        financial_summary = {
-            "ticket_revenue": ticket_revenue,
-            "item_revenue": item_revenue,
-            "total_revenue": ticket_revenue + item_revenue
-        }
-
-        # 7. Generate detailed report
-        ticket_details = db.query(models.Ticket).filter(
-            models.Ticket.event_id == event_id
-        ).all()
-
-        ticket_summary = []
-        for ticket in ticket_details:
-            sales = db.query(
-                func.sum(models.TicketSale.quantity).label('quantity_sold'),
-                func.sum(models.TicketSale.total_amount).label('revenue')
-                ).filter(models.TicketSale.ticket_id == ticket.id).first()
-
-            ticket_summary.append(
-                {
-                    "type": ticket.type,
-                    "price": ticket.price,
-                    "quantity_sold": sales.quantity_sold or 0,
-                    "revenue": sales.revenue or 0
-                }
-            )
-
-        item_details = db.query(models.Item).filter(
-            models.Item.event_id == event_id
-        ).all()
-
-        item_summary = []
-        for item in item_details:
-            sales = db.query(
-                func.sum(models.Sale.quantity_sold).label('quantity_sold'),
-                func.sum(models.Sale.total_revenue).label('revenue')
-                ).filter(models.Sale.item_id == item.id).first()
-
-            item_summary.append(
-                {
-                    "name": item.name,
-                    "price": item.price,
-                    "quantity_sold": sales.quantity_sold or 0,
-                    "revenue": sales.revenue or 0,
-                    "remaining_stock": item.quantity
-                }
-            )
-
-        # 8. Commit all changes
-        db.commit()
-
-        # 9. Return comprehensive closing report
-        return {
-            "event_id": event_id,
-            "event_name": event.name,
-            "status": "closed",
-            "closed_at": event.closed_at,
-            "financial_summary": financial_summary,
-            "ticket_sales": {
-                "total_revenue": ticket_revenue,
-                "details": ticket_summary
-            },
-            "item_sales": {
-                "total_revenue": item_revenue,
-                "details": item_summary
-            }
-        }
-
     except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error closing event: {str(e)}"
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error closing event: {str(e)}"
+            )
+
+@router.post("/{event_id}/report")
+def report(event_id: str):
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    # 2. Calculate ticket sales revenue
+    ticket_sales = db.query(
+                func.sum(models.TicketSale.total_amount).label('total')
+            ).join(
+                models.Ticket
+            ).filter(
+                models.Ticket.event_id == event_id
+            ).first()
+
+    ticket_revenue = ticket_sales.total or 0
+
+            # 3. Calculate item sales revenue
+    item_sales = db.query(
+                func.sum(models.Sale.total_revenue).label('total')
+            ).join(
+                models.Item
+            ).filter(
+                models.Item.event_id == event_id
+            ).first()
+
+    item_revenue = item_sales.total or 0
+
+    # 6. Generate financial summary
+    financial_summary = {
+        "ticket_revenue": ticket_revenue,
+        "item_revenue": item_revenue,
+        "total_revenue": ticket_revenue + item_revenue
+    }
+
+    # 7. Generate detailed report
+    ticket_details = db.query(models.Ticket).filter(
+        models.Ticket.event_id == event_id
+    ).all()
+
+    ticket_summary = []
+    for ticket in ticket_details:
+        sales = db.query(
+            func.sum(models.TicketSale.quantity).label('quantity_sold'),
+            func.sum(models.TicketSale.total_amount).label('revenue')
+            ).filter(models.TicketSale.ticket_id == ticket.id).first()
+
+        ticket_summary.append(
+            {
+                "type": ticket.type,
+                "price": ticket.price,
+                "quantity_sold": sales.quantity_sold or 0,
+                "revenue": sales.revenue or 0
+            }
         )
+
+    item_details = db.query(models.Item).filter(
+        models.Item.event_id == event_id
+    ).all()
+
+    item_summary = []
+    for item in item_details:
+        sales = db.query(
+            func.sum(models.Sale.quantity_sold).label('quantity_sold'),
+            func.sum(models.Sale.total_revenue).label('revenue')
+            ).filter(models.Sale.item_id == item.id).first()
+
+        item_summary.append(
+            {
+                "name": item.name,
+                "price": item.price,
+                "quantity_sold": sales.quantity_sold or 0,
+                "revenue": sales.revenue or 0,
+                "remaining_stock": item.quantity
+            }
+        )
+
+    # 8. Commit all changes
+    db.commit()
+
+    # 9. Return comprehensive closing report
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "status": "closed",
+        "closed_at": event.closed_at,
+        "financial_summary": financial_summary,
+        "ticket_sales": {
+            "total_revenue": ticket_revenue,
+            "details": ticket_summary
+        },
+        "item_sales": {
+            "total_revenue": item_revenue,
+            "details": item_summary
+        }
+    }
+

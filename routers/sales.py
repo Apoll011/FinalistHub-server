@@ -269,34 +269,6 @@ def get_top_selling_items(
         ]
     }
 
-@router.get("/sales-by-hour", response_model=schemas.SalesResponse)
-def get_sales_by_hour(
-        date: str,
-        db: Session = Depends(get_db)
-):
-    """Get hourly sales breakdown for a specific date"""
-    query = db.query(
-        extract('hour', models.Sale.timestamp).label('hour'),
-        func.sum(models.Sale.total_revenue).label('revenue'),
-        func.count(models.Sale.id).label('transaction_count')
-    ).filter(
-        func.date(models.Sale.timestamp) == date
-    ).group_by(extract('hour', models.Sale.timestamp)) \
-        .order_by('hour')
-
-    hourly_sales = query.all()
-
-    return {
-        "date": date,
-        "hourly_breakdown": [
-            {
-                "hour": int(hour.hour),
-                "revenue": hour.revenue,
-                "transactions": hour.transaction_count
-            } for hour in hourly_sales
-        ]
-    }
-
 @router.post("/bulk-sale", response_model=schemas.BulkSaleResponse)
 def create_bulk_sale(
         items: List[schemas.SaleCreate],

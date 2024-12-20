@@ -4,7 +4,7 @@ from sqlalchemy import func, text
 import uuid
 import models, schemas
 from database import get_db
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.sql.expression import extract
 from typing import Dict, Optional, List
 
@@ -110,6 +110,39 @@ def get_monthly_transactions(db: Session = Depends(get_db)):
         ]
     }
 
+@router.get("/transactions/weekly", response_model=schemas.WeeklyFinancialReport)
+def get_weekly_transactions(db: Session = Depends(get_db)):
+    # Calculate the start and end of the current week
+    start_of_week = (datetime.utcnow() - timedelta(days=datetime.utcnow().weekday())).strftime("%Y-%m-%d")
+    end_of_week = (datetime.utcnow() + timedelta(days=6 - datetime.utcnow().weekday())).strftime("%Y-%m-%d")
+
+    # Get all transactions for the current week
+    transactions = db.query(models.Transaction) \
+        .filter(models.Transaction.timestamp >= start_of_week) \
+        .filter(models.Transaction.timestamp <= end_of_week) \
+        .all()
+
+    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
+    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
+
+    return {
+        "week_start": start_of_week,
+        "week_end": end_of_week,
+        "total_revenue": total_revenue,
+        "total_expenses": total_expenses,
+        "net_income": total_revenue - total_expenses,
+        "transactions": [
+            {
+                "id": t.id,
+                "type": t.type,
+                "description": t.description,
+                "amount": t.amount,
+                "timestamp": t.timestamp
+            } for t in transactions
+        ]
+    }
+
+
 @router.get("/top-revenue-sources", response_model=schemas.TopRevenueSourcesResponse)
 def get_top_revenue_sources(
         limit: int = 10,
@@ -145,13 +178,13 @@ def get_top_revenue_sources(
     }
 
 @router.get("/daily-revenue", response_model=schemas.DailyRevenueResponse)
-def get_daily_revenue(
-        start_date: str = datetime.now().strftime("%Y-%m-%d"),
-        end_date: str = datetime.now().strftime("%Y-%m-%d"),
-        db: Session = Depends(get_db)
+def get_daily_transactions(
+    start_date: str = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime("%Y-%m-%d"),
+    end_date: str = (datetime.now() + timedelta(days=6 - datetime.now().weekday())).strftime("%Y-%m-%d"),
+    db: Session = Depends(get_db)
 ):
-    """Get daily revenue breakdown"""
-    query = db.query(
+    """Get daily transaction breakdown"""
+    revenue_query = db.query(
         func.date(models.Transaction.timestamp).label('date'),
         func.sum(models.Transaction.amount).label('revenue')
     ).filter(
@@ -160,16 +193,32 @@ def get_daily_revenue(
     ).group_by(func.date(models.Transaction.timestamp)) \
         .order_by(text('date'))
 
-    daily_revenue = query.all()
+    expense_query = db.query(
+        func.date(models.Transaction.timestamp).label('date'),
+        func.sum(models.Transaction.amount).label('expense')
+    ).filter(
+        models.Transaction.type == "expense",
+        models.Transaction.timestamp.between(start_date, end_date)
+    ).group_by(func.date(models.Transaction.timestamp)) \
+        .order_by(text('date'))
+
+    revenue_data = {day.date: day.revenue for day in revenue_query.all()}
+    expense_data = {day.date: day.expense for day in expense_query.all()}
+
+    # Combine revenue and expense by date
+    all_dates = set(revenue_data.keys()).union(expense_data.keys())
+    daily_breakdown = [
+        {
+            "date": str(date),
+            "revenue": revenue_data.get(date, 0),
+            "expense": expense_data.get(date, 0)
+        } for date in sorted(all_dates)
+    ]
 
     return {
-        "daily_breakdown": [
-            {
-                "date": str(day.date),
-                "revenue": day.revenue
-            } for day in daily_revenue
-        ]
+        "daily_breakdown": daily_breakdown
     }
+
 
 @router.get("/profit", response_model=schemas.ProfitReportResponse)
 def get_profit_report(

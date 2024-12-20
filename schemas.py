@@ -165,6 +165,10 @@ class FinancialReport(BaseModel):
 class MonthlyFinancialReport(FinancialReport):
     month: str  # Format 'YYYY-MM'
 
+class WeeklyFinancialReport(FinancialReport):
+    week_start: str  # Format 'YYYY-MM'
+    week_end: str
+
 class MeetingBase(BaseModel):
     date: str
     time: str
@@ -198,22 +202,15 @@ class ItemResponse(BaseModel):
 class TopItemsResponse(BaseModel):
     items: list[ItemResponse]
 
-class HourlyBreakdownResponse(BaseModel):
-    hour: int
-    revenue: float
-    transactions: int
-
-class SalesResponse(BaseModel):
-    date: datetime
-    hourly_breakdown: list[HourlyBreakdownResponse]
-
 class BulkSaleResponse(BaseModel):
     total_revenue: float
     sales_count: int
 
+class AvailableResponse(BaseModel):
+    available: bool
 
 class LowStockItemResponse(BaseModel):
-    id: int
+    id: str
     name: str
     current_quantity: int
     price: float
@@ -243,6 +240,7 @@ class ProfitReportResponse(BaseModel):
 class DailyBreakdown(BaseModel):
     date: str  # using str for date formatting
     revenue: float
+    expense: float
 
 class DailyRevenueResponse(BaseModel):
     daily_breakdown: List[DailyBreakdown]
@@ -261,7 +259,7 @@ class EventStatisticsResponse(BaseModel):
 
 
 class DuplicateEventResponse(BaseModel):
-    new_event_id: int
+    new_event_id: str
     name: str
     date: str
     time: datetime
@@ -271,7 +269,7 @@ class SearchEventsResponse(BaseModel):
     events: List[Event]
 
 class TrendingEvent(BaseModel):
-    id: int
+    id: str
     name: str
     date: str
     ticket_sales: int
@@ -294,14 +292,14 @@ class HistoricalData(BaseModel):
     count: int
 
 class EventForecastResponse(BaseModel):
-    event_id: int
+    event_id: str
     current_sales: int
     predicted_attendance: int
     historical_data: List[HistoricalData]
 
 class ObservationResponse(BaseModel):
-    id: int
-    eventId: int
+    id: str
+    eventId: str
     content: str
     createdAt: datetime
 
@@ -334,19 +332,25 @@ class EventDetailsResponse(BaseModel):
     sales: SalesData
     observations: List[ObservationInput]
 
+class DateInput(BaseModel):
+    date: str
+    time: str
+
 class RescheduleEventResponse(BaseModel):
-    id: int
-    date: datetime
-    time: datetime
+    id: str
+    date: str
+    time: str
 
 
-class CancelEventResponse(BaseModel):
-    id: int
+class ReopenEventResponse(BaseModel):
+    id: str
     status: str
+
+class CancelEventResponse(ReopenEventResponse):
     cancelledAt: datetime
 
 class EventRevenueRanking(BaseModel):
-    id: int
+    id: str
     name: str
     date: str
     ticket_revenue: float
@@ -361,12 +365,17 @@ class TicketSales(BaseModel):
     details: List[TicketSaleDetail]
 
 class ItemSaleDetail(BaseModel):
-    type: str
+    name: str
     price: float
     quantity_sold: int
     revenue: float
+    remaining_stock: int
 
 class ItemSales(BaseModel):
+    total_revenue: float
+    details: List[ItemSaleDetail]
+
+class EventFinancialReport(BaseModel):
     total_revenue: float
     details: List[ItemSaleDetail]
 
@@ -375,6 +384,6 @@ class EventClosingResponse(BaseModel):
     event_name: str
     status: str
     closed_at: datetime
-    financial_summary: dict  # Contains ticket_revenue, item_revenue, total_revenue
+    financial_summary: dict
     ticket_sales: TicketSales
     item_sales: ItemSales
