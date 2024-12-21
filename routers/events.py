@@ -669,28 +669,28 @@ def close_event(
 
         item_revenue = item_sales.total or 0
 
-        if ticket_revenue > 0:
-            ticket_transaction = models.Transaction(
+        ticket_transaction = models.Transaction(
                 id=str(uuid.uuid4()),
                 type="revenue",
                 description=f"Ticket sales revenue for event: {event.name}",
                 amount=ticket_revenue,
                 event_id=event_id
             )
-            db.add(ticket_transaction)
+        db.add(ticket_transaction)
 
-        if item_revenue < 0:
-            item_transaction = models.Transaction(
+        item_transaction = models.Transaction(
                 id=str(uuid.uuid4()),
-                type="expense",
-                description=f"Item sales expense for event: {event.name}",
+                type="revenue",
+                description=f"Item sales revenue for event: {event.name}",
                 amount=item_revenue,
                 event_id=event_id
             )
-            db.add(item_transaction)
+        db.add(item_transaction)
 
         event.status = "closed"
         event.closed_at = datetime.utcnow()
+        db.commit()
+
     except Exception as e:
             db.rollback()
             raise HTTPException(
