@@ -120,7 +120,7 @@ def delete_item(
     item_id: str,
     db: Session = Depends(get_db)
 ):
-    db_item = db.query(models.Item).filter(models.Item.id == sale.item_id).first()
+    db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -698,8 +698,8 @@ def close_event(
                 detail=f"Error closing event: {str(e)}"
             )
 
-@router.post("/{event_id}/report")
-def report(event_id: str):
+@router.get("/{event_id}/report", response_model=schemas.EventReportResponse)
+def report(event_id: str, db: Session = Depends(get_db)):
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -782,8 +782,9 @@ def report(event_id: str):
     return {
         "event_id": event_id,
         "event_name": event.name,
-        "status": "closed",
-        "closed_at": event.closed_at,
+        "status": event.status,
+        "date": event.date,
+        "time": event.time,
         "financial_summary": financial_summary,
         "ticket_sales": {
             "total_revenue": ticket_revenue,

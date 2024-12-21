@@ -376,14 +376,16 @@ class ItemSales(BaseModel):
     details: List[ItemSaleDetail]
 
 class EventFinancialReport(BaseModel):
-    total_revenue: float
-    details: List[ItemSaleDetail]
+     ticket_revenue: int
+     item_revenue: int
+     total_revenue: int
 
-class EventClosingResponse(BaseModel):
+class EventReportResponse(BaseModel):
     event_id: str
     event_name: str
     status: str
-    closed_at: datetime
-    financial_summary: dict
+    time: str
+    date: str
+    financial_summary: EventFinancialReport
     ticket_sales: TicketSales
     item_sales: ItemSales

@@ -63,11 +63,12 @@ def update_meeting(
         meeting_data: schemas.MeetingBase,
         db: Session = Depends(get_db)
 ):
+    print(meeting_data)
     db_meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
     if not db_meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
-    for key, value in meeting_data.items():
+    for key, value in meeting_data.dict().items():
         setattr(db_meeting, key, value)
 
     db_meeting.created_at = datetime.utcnow()
