@@ -177,13 +177,27 @@ def get_top_revenue_sources(
         ]
     }
 
+from datetime import datetime, timedelta
+from typing import List, Dict
+
 @router.get("/daily-revenue", response_model=schemas.DailyRevenueResponse)
 def get_daily_transactions(
-    start_date: str = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime("%Y-%m-%d"),
-    end_date: str = (datetime.now() + timedelta(days=6 - datetime.now().weekday())).strftime("%Y-%m-%d"),
+    start_date: str = None,  # Allow start_date to be optional
+    end_date: str = None,    # Allow end_date to be optional
     db: Session = Depends(get_db)
 ):
     """Get daily transaction breakdown"""
+    # Determine the start_date: last Sunday or today if it's Sunday
+    if start_date is None:
+        if datetime.now().weekday() == 6:  # Today is Sunday
+            start_date = datetime.now().strftime("%Y-%m-%d")
+        else:
+            start_date = (datetime.now() - timedelta(days=datetime.now().weekday() + 1)).strftime("%Y-%m-%d")  # Last Sunday
+
+    # Calculate the end_date: next Saturday
+    if end_date is None:
+        end_date = (datetime.now() + timedelta(days=(datetime.now().weekday()))).strftime("%Y-%m-%d")  # Next Saturday
+
     revenue_query = db.query(
         func.date(models.Transaction.timestamp).label('date'),
         func.sum(models.Transaction.amount).label('revenue')
@@ -218,6 +232,7 @@ def get_daily_transactions(
     return {
         "daily_breakdown": daily_breakdown
     }
+
 
 
 @router.get("/profit", response_model=schemas.ProfitReportResponse)
