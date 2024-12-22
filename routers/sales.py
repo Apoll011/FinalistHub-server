@@ -37,45 +37,6 @@ def sell_stock_item(
     db.refresh(db_sale)
     return db_sale
 
-@router.post("/custom-item", response_model=schemas.ItemCustom)
-def sell_custom_item(
-        item_data: schemas.PriceQuantity,
-        db: Session = Depends(get_db)
-):
-    total_revenue = item_data["price"] * item_data["quantity"]
-
-    db_sale = models.Sale(
-        id=str(uuid.uuid4()),
-        price=item_data["price"],
-        quantity_sold=item_data["quantity"],
-        total_revenue=total_revenue
-    )
-    db.add(db_sale)
-    db.commit()
-    db.refresh(db_sale)
-
-    return {
-        "id": db_sale.id,
-        "price": db_sale.price,
-        "quantity": db_sale.quantity_sold,
-        "total_revenue": db_sale.total_revenue,
-        "timestamp": db_sale.timestamp
-    }
-
-@router.post("/register-item", response_model=schemas.Item)
-def register_item(
-        item: schemas.ItemCreate,
-        db: Session = Depends(get_db)
-):
-    db_item = models.Item(
-        id=str(uuid.uuid4()),
-        **item.dict()
-    )
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
 @router.get("/receipt/{event_id}", response_model=schemas.SalesSummaryResponse)
 def get_receipt(
         event_id: str,

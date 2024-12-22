@@ -672,20 +672,22 @@ def close_event(
         ticket_transaction = models.Transaction(
                 id=str(uuid.uuid4()),
                 type="revenue",
-                description=f"Ticket sales revenue for event: {event.name}",
+                description=f"Venda de bilhetes para o evento: {event.name}",
                 amount=ticket_revenue,
                 event_id=event_id
             )
-        db.add(ticket_transaction)
+        if ticket_revenue > 0:
+            db.add(ticket_transaction)
 
         item_transaction = models.Transaction(
                 id=str(uuid.uuid4()),
                 type="revenue",
-                description=f"Item sales revenue for event: {event.name}",
+                description=f"Venda de Items para o Evento: {event.name}",
                 amount=item_revenue,
                 event_id=event_id
             )
-        db.add(item_transaction)
+        if item_revenue > 0:
+            db.add(item_transaction)
 
         event.status = "closed"
         event.closed_at = datetime.utcnow()
