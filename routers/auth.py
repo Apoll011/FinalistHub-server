@@ -157,9 +157,6 @@ async def get_usersd(db: Session = Depends(get_db)):
 async def delete_users(db: Session = Depends(get_db)):
     users = db.query(UserModel).all()
     for user in users:
-        user = get_user_by_username(db, username)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
         db.delete(user)
         db.commit()
     return {"message": "User deleted successfully"}
