@@ -147,3 +147,19 @@ async def delete_user(username: str, current_user: UserModel = Depends(get_curre
     db.delete(user)
     db.commit()
     return {"message": "User deleted successfully"}
+
+@router.get("/users/l")
+async def get_usersd(db: Session = Depends(get_db)):
+    users = db.query(UserModel).all()
+    return [{"username": user.username, "role": user.role} for user in users]
+
+@router.delete("/users")
+async def delete_users(db: Session = Depends(get_db)):
+    users = db.query(UserModel).all()
+    for user in users:
+        user = get_user_by_username(db, username)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        db.delete(user)
+        db.commit()
+    return {"message": "User deleted successfully"}
