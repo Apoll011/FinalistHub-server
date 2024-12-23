@@ -40,6 +40,9 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class PasswordChangeRequest(BaseModel):
+    new_password: str
+
 # Helper functions
 def get_db():
     db = SessionLocal()
@@ -125,11 +128,11 @@ async def update_role(username: str, new_role: str, current_user: UserModel = De
 
 @router.patch("/user/change-password")
 async def change_password(
-    new_password: str,
+    new_password: PasswordChangeRequest,
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    hashed_password = hash_password(new_password)
+    hashed_password = hash_password(new_password.new_password)
     current_user.hashed_password = hashed_password
     db.commit()
     return {"message": "Password changed successfully"}
