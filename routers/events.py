@@ -480,16 +480,16 @@ def get_events_statistics(
     }
 
 @router.get("/calendar", response_model=List[schemas.Event])
-def get_calendar(db: Session = Depends(get_db)):
+def get_calendar(all: bool = False, db: Session = Depends(get_db)):
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
-    return db.query(models.Event).filter(or_(models.Event.status != schemas.EventStatus.closed,
+    return db.query(models.Event).filter(or_(all,or_(models.Event.status != schemas.EventStatus.closed,
                                                          and_(
                                                              models.Event.status == schemas.EventStatus.closed,
                                                              models.Event.closed_at >= yesterday,
                                                              models.Event.closed_at <= today
                                                          )
-                                                     ))
+                                                     )))
 
 
 @router.get("/search", response_model=schemas.SearchEventsResponse)
@@ -528,40 +528,6 @@ def search_events(
         "events": [event.id for event in events]
     }
 
-@router.get("/trending", response_model=schemas.EventTrendingResponse)
-def get_trending_events(
-        days: int = 30,
-        limit: int = 5,
-        db: Session = Depends(get_db)
-):
-    """Get trending events based on ticket sales"""
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
-
-    query = db.query(
-        models.Event,
-        func.count(models.TicketSale.id).label('ticket_count')
-    ).join(models.Ticket) \
-        .join(models.TicketSale) \
-        .filter(
-        models.Event.status == schemas.EventStatus.active,
-        models.TicketSale.created_at >= cutoff_date
-    ).group_by(models.Event) \
-        .order_by(text('ticket_count DESC')) \
-        .limit(limit)
-
-    trending = query.all()
-
-    return {
-        "trending_events": [
-            {
-                "id": event.Event.id,
-                "name": event.Event.name,
-                "date": event.Event.date,
-                "ticket_sales": event.ticket_count
-            } for event in trending
-        ]
-    }
-
 @router.get("/capacity-analysis", response_model=schemas.CapacityAnalysisResponse)
 def get_capacity_analysis(
         db: Session = Depends(get_db)
@@ -591,6 +557,7 @@ def get_capacity_analysis(
     return {
         "capacity_analysis": analysis
     }
+
 
 #Items
 

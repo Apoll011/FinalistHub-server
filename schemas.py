@@ -247,15 +247,6 @@ class SearchEventsResponse(BaseModel):
     total_results: int
     events: List[str]
 
-class TrendingEvent(BaseModel):
-    id: str
-    name: str
-    date: str
-    ticket_sales: int
-
-class EventTrendingResponse(BaseModel):
-    trending_events: List[TrendingEvent]
-
 class CapacityAnalysisEvent(BaseModel):
     event_id: str
     name: str
