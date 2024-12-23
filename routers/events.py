@@ -5,7 +5,7 @@ import models, schemas
 from database import get_db
 from datetime import datetime, timedelta
 from sqlalchemy.sql import func
-from sqlalchemy import or_, text
+from sqlalchemy import or_, and_, text
 from typing import Dict, Optional, List
 
 router = APIRouter()
@@ -481,7 +481,15 @@ def get_events_statistics(
 
 @router.get("/calendar", response_model=List[schemas.Event])
 def get_calendar(db: Session = Depends(get_db)):
-    return db.query(models.Event).all()
+    today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
+    return db.query(models.Event).filter(or_(models.Event.status != schemas.EventStatus.closed,
+                                                         and_(
+                                                             models.Event.status == schemas.EventStatus.closed,
+                                                             models.Event.closed_at >= yesterday,
+                                                             models.Event.closed_at <= today
+                                                         )
+                                                     ))
 
 
 @router.get("/search", response_model=schemas.SearchEventsResponse)
