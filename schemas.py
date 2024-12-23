@@ -1,6 +1,16 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
+
+class EventStatus(str, Enum):
+    active = "active"
+    closed = "closed"
+    cancelled = "cancelled"
+
+class TransactionType(str, Enum):
+    expense = "expense"
+    revenue = "revenue"
 
 class EventBase(BaseModel):
     name: str
@@ -14,7 +24,7 @@ class EventCreate(EventBase):
 
 class Event(EventBase):
     id: str
-    status: str
+    status: EventStatus
     created_at: datetime
 
     class Config:
@@ -36,13 +46,6 @@ class Ticket(TicketBase):
     class Config:
         orm_mode = True
 
-class PriceQuantity(BaseModel):
-    quantity: int
-    price: float
-
-    class Config:
-        orm_mode = True
-
 class ItemBase(BaseModel):
     name: str
     quantity: int
@@ -59,12 +62,6 @@ class Item(ItemBase):
     class Config:
         orm_mode = True
 
-class ItemCustom(ItemBase):
-    id: str
-    quantity_sold: int
-    total_revenue: float
-    timestamp: datetime
-
 class SaleBase(BaseModel):
     quantity_sold: int
 
@@ -74,21 +71,6 @@ class SaleCreate(SaleBase):
 class Sale(SaleCreate):
     id: str
     total_revenue: float
-    timestamp: datetime
-
-    class Config:
-        orm_mode = True
-
-class ItemSold(BaseModel):
-    name: str
-    quantity: int
-    unit_price: float
-    total_price: float
-
-class SalesSummaryResponse(BaseModel):
-    event_id: str
-    total_sales: float
-    items_sold: List[ItemSold]
     timestamp: datetime
 
     class Config:
@@ -146,7 +128,7 @@ class FinancialTransactionBase(BaseModel):
 
 class FinancialTransaction(FinancialTransactionBase):
     id: str
-    type: str  # 'revenue' or 'expense'
+    type: TransactionType  # 'revenue' or 'expense'
     timestamp: datetime
 
     class Config:
@@ -174,9 +156,6 @@ class MeetingBase(BaseModel):
     time: str
     location: str
     agenda: str
-
-class MeetingCreate(MeetingBase):
-    pass
 
 class Meeting(MeetingBase):
     id: str
@@ -266,7 +245,7 @@ class DuplicateEventResponse(BaseModel):
 
 class SearchEventsResponse(BaseModel):
     total_results: int
-    events: List[Event]
+    events: List[str]
 
 class TrendingEvent(BaseModel):
     id: str
@@ -282,20 +261,10 @@ class CapacityAnalysisEvent(BaseModel):
     name: str
     date: str
     tickets_sold: int
-    status: str
+    status: EventStatus
 
 class CapacityAnalysisResponse(BaseModel):
     capacity_analysis: List[CapacityAnalysisEvent]
-
-class HistoricalData(BaseModel):
-    date: str
-    count: int
-
-class EventForecastResponse(BaseModel):
-    event_id: str
-    current_sales: int
-    predicted_attendance: int
-    historical_data: List[HistoricalData]
 
 class ObservationResponse(BaseModel):
     id: str
@@ -328,7 +297,7 @@ class EventDetailsResponse(BaseModel):
     date: str
     time: str
     location: str
-    status: str
+    status: EventStatus
     sales: SalesData
     observations: List[ObservationInput]
 
@@ -344,21 +313,10 @@ class RescheduleEventResponse(BaseModel):
 
 class ReopenEventResponse(BaseModel):
     id: str
-    status: str
+    status: EventStatus
 
 class CancelEventResponse(ReopenEventResponse):
     cancelledAt: datetime
-
-class EventRevenueRanking(BaseModel):
-    id: str
-    name: str
-    date: str
-    ticket_revenue: float
-    item_revenue: float
-    total_revenue: float
-
-class RevenueRankingResponse(BaseModel):
-    events: List[EventRevenueRanking]
 
 class TicketSales(BaseModel):
     total_revenue: float
@@ -383,7 +341,7 @@ class EventFinancialReport(BaseModel):
 class EventReportResponse(BaseModel):
     event_id: str
     event_name: str
-    status: str
+    status: EventStatus
     time: str
     date: str
     financial_summary: EventFinancialReport

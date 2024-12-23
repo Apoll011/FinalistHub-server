@@ -6,7 +6,7 @@ import models, schemas
 from database import get_db
 from datetime import datetime, timedelta
 from sqlalchemy.sql.expression import extract
-from typing import Dict, Optional, List
+from typing import Optional
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ def add_revenue(
 ):
     transaction = models.Transaction(
         id=str(uuid.uuid4()),
-        type="revenue",
+        type=schemas.TransactionType.revenue,
         description=description,
         amount=amount
     )
@@ -35,7 +35,7 @@ def add_expenses(
 ):
     transaction = models.Transaction(
         id=str(uuid.uuid4()),
-        type="expense",
+        type=schemas.TransactionType.expense,
         description=description,
         amount=amount
     )
@@ -47,11 +47,11 @@ def add_expenses(
 @router.get("/balance", response_model=schemas.Balance)
 def get_balance(db: Session = Depends(get_db)):
     revenue = db.query(models.Transaction).filter(
-        models.Transaction.type == "revenue"
+        models.Transaction.type == schemas.TransactionType.revenue
     ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
 
     expenses = db.query(models.Transaction).filter(
-        models.Transaction.type == "expense"
+        models.Transaction.type == schemas.TransactionType.expense
     ).with_entities(func.sum(models.Transaction.amount)).scalar() or 0
 
     return {
@@ -64,8 +64,9 @@ def get_transactions(db: Session = Depends(get_db)):
     transactions = db.query(models.Transaction) \
         .all()
 
-    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
-    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
+    total_revenue = sum(t.amount for t in transactions if t.type == schemas.TransactionType.revenue)
+    total_expenses = sum(t.amount for t in transactions if t.type == schemas.TransactionType.expense)
+
     return {
         "total_revenue": total_revenue,
         "total_expenses": total_expenses,
@@ -91,8 +92,8 @@ def get_monthly_transactions(db: Session = Depends(get_db)):
         .filter(extract('month', models.Transaction.timestamp) == datetime.utcnow().month) \
         .all()
 
-    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
-    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
+    total_revenue = sum(t.amount for t in transactions if t.type == schemas.TransactionType.revenue)
+    total_expenses = sum(t.amount for t in transactions if t.type == schemas.TransactionType.expense)
 
     return {
         "month": current_month,
@@ -122,8 +123,8 @@ def get_weekly_transactions(db: Session = Depends(get_db)):
         .filter(models.Transaction.timestamp <= end_of_week) \
         .all()
 
-    total_revenue = sum(t.amount for t in transactions if t.type == "revenue")
-    total_expenses = sum(t.amount for t in transactions if t.type == "expense")
+    total_revenue = sum(t.amount for t in transactions if t.type == schemas.TransactionType.revenue)
+    total_expenses = sum(t.amount for t in transactions if t.type == schemas.TransactionType.expense)
 
     return {
         "week_start": start_of_week,
@@ -155,7 +156,7 @@ def get_top_revenue_sources(
         models.Transaction.description,
         func.sum(models.Transaction.amount).label('total_amount'),
         func.count(models.Transaction.id).label('transaction_count')
-    ).filter(models.Transaction.type == "revenue")
+    ).filter(models.Transaction.type == schemas.TransactionType.revenue)
 
     if start_date:
         query = query.filter(models.Transaction.timestamp >= start_date)
@@ -176,9 +177,6 @@ def get_top_revenue_sources(
             } for r in results
         ]
     }
-
-from datetime import datetime, timedelta
-from typing import List, Dict
 
 @router.get("/daily-revenue", response_model=schemas.DailyRevenueResponse)
 def get_daily_transactions(
@@ -202,7 +200,7 @@ def get_daily_transactions(
         func.date(models.Transaction.timestamp).label('date'),
         func.sum(models.Transaction.amount).label('revenue')
     ).filter(
-        models.Transaction.type == "revenue",
+        models.Transaction.type == schemas.TransactionType.revenue,
         models.Transaction.timestamp.between(start_date, end_date)
     ).group_by(func.date(models.Transaction.timestamp)) \
         .order_by(text('date'))
@@ -211,7 +209,7 @@ def get_daily_transactions(
         func.date(models.Transaction.timestamp).label('date'),
         func.sum(models.Transaction.amount).label('expense')
     ).filter(
-        models.Transaction.type == "expense",
+        models.Transaction.type == schemas.TransactionType.expense,
         models.Transaction.timestamp.between(start_date, end_date)
     ).group_by(func.date(models.Transaction.timestamp)) \
         .order_by(text('date'))
@@ -256,8 +254,8 @@ def get_profit_report(
 
     transactions = query.all()
 
-    revenue = sum(t.amount for t in transactions if t.type == "revenue")
-    expenses = sum(t.amount for t in transactions if t.type == "expense")
+    revenue = sum(t.amount for t in transactions if t.type == schemas.TransactionType.revenue)
+    expenses = sum(t.amount for t in transactions if t.type == schemas.TransactionType.expense)
 
     return {
         "period": {

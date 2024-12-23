@@ -14,8 +14,10 @@ def sell_stock_item(
         sale: schemas.SaleCreate,
         db: Session = Depends(get_db)
 ):
+    print("Hi")
     db_item = db.query(models.Item).filter(models.Item.id == sale.item_id).first()
     if not db_item:
+        print("Hello", sale.item_id)
         raise HTTPException(status_code=404, detail="Item not found")
 
     if db_item.quantity < sale.quantity_sold:
@@ -37,37 +39,6 @@ def sell_stock_item(
     db.refresh(db_sale)
     return db_sale
 
-@router.get("/receipt/{event_id}", response_model=schemas.SalesSummaryResponse)
-def get_receipt(
-        event_id: str,
-        db: Session = Depends(get_db)
-):
-    sales = db.query(models.Sale) \
-        .join(models.Item) \
-        .filter(models.Item.event_id == event_id) \
-        .all()
-
-    if not sales:
-        raise HTTPException(status_code=404, detail="No sales found for this event")
-
-    items_sold = [
-        {
-            "name": sale.item.name,
-            "quantity": sale.quantity_sold,
-            "unitPrice": sale.item.price,
-            "totalPrice": sale.total_revenue
-        } for sale in sales
-    ]
-
-    total_sales = sum(sale.total_revenue for sale in sales)
-
-    return {
-        "eventId": event_id,
-        "totalSales": total_sales,
-        "itemsSold": items_sold,
-        "timestamp": datetime.utcnow()
-    }
-
 @router.post("/tickets", response_model=schemas.TicketSale)
 def sell_tickets(
     sale: schemas.TicketSaleCreate,
@@ -84,7 +55,7 @@ def sell_tickets(
         raise HTTPException(status_code=404, detail="Event not found")
 
     # Check if event is still active
-    if event.status != "active":
+    if event.status != schemas.EventStatus.active:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot sell tickets for {event.status} event"
@@ -196,24 +167,19 @@ def get_ticket_sales_history(
         "sales": sales_data
     }
 
-@router.get("/top-selling-items", response_model=schemas.TopItemsResponse)
+@router.get("/top-selling-items/{event_id}", response_model=schemas.TopItemsResponse)
 def get_top_selling_items(
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        event_id: str,
         limit: int = 10,
         db: Session = Depends(get_db)
 ):
-    """Get top selling items by quantity and revenue"""
+    """Get top selling items by quantity and revenue for a specific event."""
     query = db.query(
         models.Item.name,
         func.sum(models.Sale.quantity_sold).label('total_quantity'),
         func.sum(models.Sale.total_revenue).label('total_revenue')
-    ).join(models.Sale)
-
-    if start_date:
-        query = query.filter(models.Sale.timestamp >= start_date)
-    if end_date:
-        query = query.filter(models.Sale.timestamp <= end_date)
+    ).join(models.Item, models.Sale.item_id == models.Item.id) \
+        .filter(models.Item.event_id == event_id)
 
     top_items = query.group_by(models.Item.name) \
         .order_by(text('total_revenue DESC')) \
@@ -229,6 +195,8 @@ def get_top_selling_items(
             } for item in top_items
         ]
     }
+
+
 
 @router.post("/bulk-sale", response_model=schemas.BulkSaleResponse)
 def create_bulk_sale(
@@ -271,13 +239,15 @@ def create_bulk_sale(
         "sales_count": len(sales_records)
     }
 
-@router.get("/inventory-alerts", response_model=schemas.InventoryAlertResponse)
+@router.get("/inventory-alerts/{event_id}", response_model=schemas.InventoryAlertResponse)
 def get_inventory_alerts(
+        event_id: str,
         threshold: int = 10,
         db: Session = Depends(get_db)
 ):
-    """Get items with low inventory"""
+    """Get items with low inventory for a specific event."""
     low_stock_items = db.query(models.Item) \
+        .filter(models.Item.event_id == event_id) \
         .filter(models.Item.quantity <= threshold) \
         .all()
 
