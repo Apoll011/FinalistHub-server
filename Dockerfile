@@ -5,7 +5,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install required dependencies
-RUN pip install --no-cache-dir fastapi[all] sqlalchemy uvicorn python-multipart python-jose[cryptography] PyJWT
+RUN pip install --no-cache-dir fastapi[all] sqlalchemy uvicorn python-multipart python-jose[cryptography] PyJWT passlib
 
 # Copy the project files to the image
 COPY . /app/

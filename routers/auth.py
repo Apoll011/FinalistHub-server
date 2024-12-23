@@ -1,17 +1,35 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 from pydantic import BaseModel
 from typing import Optional, List
+from sqlalchemy import Column, Integer, String, create_engine, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from datetime import datetime, timedelta
-import json
-from fastapi.security import OAuth2PasswordBearer
 
-router = APIRouter()
-
-users_db = {}
+DATABASE_URL = "sqlite:///./users.db"
+Base = declarative_base()
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 SECRET_KEY = "testidfhrtgdwref<@grsd85fesdx-tersgdgesrdvuyjt4twrsgdsfdgdgd"
 ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+router = APIRouter()
+
+class UserModel(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role = Column(String, default="member")
+
+Base.metadata.create_all(bind=engine)
 
 class User(BaseModel):
     username: str
@@ -22,7 +40,22 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# Helper functions
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(UserModel).filter(UserModel.username == username).first()
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 def create_token(data: dict):
     to_encode = data.copy()
@@ -31,46 +64,83 @@ def create_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return users_db.get(username)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        user = get_user_by_username(db, username)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        return user
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except jwt.JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")
 
-@router.post("/register")
-async def register(user: User):
-    if user.username in users_db:
+# Routes
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(user: User, db: Session = Depends(get_db)):
+    if get_user_by_username(db, user.username):
         raise HTTPException(status_code=400, detail="Username already registered")
-    users_db[user.username] = {
-        "username": user.username,
-        "password": user.password,  # In production, hash the password!
-        "role": user.role
-    }
+    hashed_password = hash_password(user.password)
+    db_user = UserModel(username=user.username, hashed_password=hashed_password, role=user.role)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
     return {"message": "User created successfully"}
 
 @router.post("/login")
-async def login(user: UserLogin):
-    if user.username not in users_db:
+async def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = get_user_by_username(db, user.username)
+    if not db_user:
         raise HTTPException(status_code=400, detail="User not found")
-    stored_user = users_db[user.username]
-    if stored_user["password"] != user.password:
+    if not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
-
-    token = create_token({"sub": user.username, "role": stored_user["role"]})
+    token = create_token({"sub": db_user.username, "role": db_user.role})
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
-    return current_user
+async def get_me(current_user: UserModel = Depends(get_current_user)):
+    return {"username": current_user.username, "role": current_user.role}
 
 @router.get("/users")
-async def get_users(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin":
+async def get_users(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
-    return users_db
+    users = db.query(UserModel).all()
+    return [{"username": user.username, "role": user.role} for user in users]
+
+@router.patch("/user/role", status_code=204)
+async def update_role(username: str, new_role: str, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    user = get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = new_role
+    db.commit()
+    return {"message": "Role updated successfully"}
+
+@router.patch("/user/change-password")
+async def change_password(
+    new_password: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    hashed_password = hash_password(new_password)
+    current_user.hashed_password = hashed_password
+    db.commit()
+    return {"message": "Password changed successfully"}
+
+@router.delete("/user/{username}")
+async def delete_user(username: str, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    user = get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}
