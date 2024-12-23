@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./events_management.db"
+SQLALCHEMY_DATABASE_URL = "sqlitecloud://clusjlcsnk.sqlite.cloud:8860?apikey=0OfGmBouwcdis72EcBahqeXVbwvlybWr7cGtaJsMfSw"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

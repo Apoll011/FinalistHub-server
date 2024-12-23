@@ -1,19 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from pydantic import BaseModel
-from typing import Optional, List
-from sqlalchemy import Column, Integer, String, create_engine, DateTime
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from typing import Optional
+from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from datetime import datetime, timedelta
 
-DATABASE_URL = "sqlite:///./users.db"
-Base = declarative_base()
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from database import get_db
+from models import UserModel
 
 SECRET_KEY = "testidfhrtgdwref<@grsd85fesdx-tersgdgesrdvuyjt4twrsgdsfdgdgd"
 ALGORITHM = "HS256"
@@ -21,15 +16,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 router = APIRouter()
-
-class UserModel(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    role = Column(String, default="member")
-
-Base.metadata.create_all(bind=engine)
 
 class User(BaseModel):
     username: str
@@ -42,14 +28,6 @@ class UserLogin(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     new_password: str
-
-# Helper functions
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_user_by_username(db: Session, username: str):
     return db.query(UserModel).filter(UserModel.username == username).first()
