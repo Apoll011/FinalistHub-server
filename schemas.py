@@ -338,3 +338,15 @@ class EventReportResponse(BaseModel):
     financial_summary: EventFinancialReport
     ticket_sales: TicketSales
     item_sales: ItemSales
+
+class User(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = "member"
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class PasswordChangeRequest(BaseModel):
+    new_password: str
