@@ -1,33 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Query
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Depends, status
+from schemas import User, UserLogin, PasswordChangeRequest
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from datetime import datetime, timedelta
 
+import os
+
 from database import get_db
 from models import UserModel
 
-SECRET_KEY = "testidfhrtgdwref<@grsd85fesdx-tersgdgesrdvuyjt4twrsgdsfdgdgd"
-ALGORITHM = "HS256"
+SECRET_KEY =  os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 router = APIRouter()
-
-class User(BaseModel):
-    username: str
-    password: str
-    role: Optional[str] = "member"
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-class PasswordChangeRequest(BaseModel):
-    new_password: str
 
 def get_user_by_username(db: Session, username: str):
     return db.query(UserModel).filter(UserModel.username == username).first()
@@ -40,7 +29,7 @@ def verify_password(plain_password, hashed_password):
 
 def create_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=30)
+    expire = datetime.utcnow() + timedelta(days=int(os.getenv("TOKEN_EXPIRATION")))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -124,17 +113,4 @@ async def delete_user(username: str, current_user: UserModel = Depends(get_curre
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user)
     db.commit()
-    return {"message": "User deleted successfully"}
-
-@router.get("/users/l")
-async def get_usersd(db: Session = Depends(get_db)):
-    users = db.query(UserModel).all()
-    return [{"username": user.username, "role": user.role} for user in users]
-
-@router.delete("/users")
-async def delete_users(db: Session = Depends(get_db)):
-    users = db.query(UserModel).all()
-    for user in users:
-        db.delete(user)
-        db.commit()
     return {"message": "User deleted successfully"}
