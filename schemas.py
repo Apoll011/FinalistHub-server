@@ -370,13 +370,13 @@ class TransactionBase(BaseModel):
     event_id: Optional[str] = None
     receipt_number: Optional[str] = None
     notes: Optional[str] = None
-    created_by: str
+    created_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
 
 class TransactionCreate(TransactionBase):
-    pass
+    created_by: str
 
 class TransactionResponse(TransactionBase):
     id: str
@@ -544,4 +544,4 @@ class CategoryUsageResponse(BaseModel):
     total_amount: float
     average_amount: float
     last_used: Optional[datetime]
-    transactions: List[Any]
+    transactions: List[TransactionResponse]
