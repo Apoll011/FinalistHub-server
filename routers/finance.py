@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text, extract
-from typing import Optional, List
+from typing import Optional, List, Dict
+import numpy as np
 import uuid
 import models, schemas
 from database import get_db
@@ -127,7 +128,6 @@ async def create_transaction(
         db_transaction.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-# Existing Financial Report Routes
 @router.get("/balance", response_model=schemas.Balance)
 def get_total_balance(db: Session = Depends(get_db)):
     """Get total balance across all accounts"""
@@ -290,20 +290,74 @@ def forecast_cashflow(
         days: int = 30,
         db: Session = Depends(get_db)
 ):
-    """Generate cashflow forecast based on historical patterns"""
+    """Generate cashflow forecast based on historical patterns using simple ML techniques"""
     end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
+    # Extend historical period to capture more patterns
+    start_date = end_date - timedelta(days=90)  # Using 90 days of history
 
-    daily_averages = db.query(
+    # Get daily transactions
+    daily_transactions = db.query(
+        models.Transaction.created_at,
         models.Transaction.type,
-        func.avg(models.Transaction.amount).label('avg_amount')
+        func.sum(models.Transaction.amount).label('total_amount')
     ).filter(
         models.Transaction.created_at.between(start_date, end_date)
-    ).group_by(models.Transaction.type).all()
+    ).group_by(
+        func.date(models.Transaction.created_at),
+        models.Transaction.type
+    ).order_by(
+        models.Transaction.created_at
+    ).all()
 
-    avg_revenue = next((avg.avg_amount for avg in daily_averages if avg.type == models.TransactionType.REVENUE), 0)
-    avg_expenses = next((avg.avg_amount for avg in daily_averages if avg.type == models.TransactionType.EXPENSE), 0)
+    # Separate revenue and expense data
+    revenue_data = {}
+    expense_data = {}
 
+    for trans in daily_transactions:
+        date = trans.created_at.date()
+        if trans.type == models.TransactionType.REVENUE:
+            revenue_data[date] = trans.total_amount
+        else:
+            expense_data[date] = trans.total_amount
+
+    def calculate_trend(data: Dict[datetime.date, float]) -> float:
+        """Calculate linear trend from historical data"""
+        if not data:
+            return 0
+        x = np.arange(len(data))
+        y = np.array(list(data.values()))
+        if len(x) > 1:
+            z = np.polyfit(x, y, 1)
+            return z[0]  # Return slope
+        return 0
+
+    def calculate_weekly_pattern(data: Dict[datetime.date, float]) -> List[float]:
+        """Calculate average amount for each day of the week"""
+        weekly_totals = [[] for _ in range(7)]
+        weekly_averages = [0] * 7
+
+        for date, amount in data.items():
+            weekday = date.weekday()
+            weekly_totals[weekday].append(amount)
+
+        for i in range(7):
+            if weekly_totals[i]:
+                weekly_averages[i] = sum(weekly_totals[i]) / len(weekly_totals[i])
+            else:
+                # If no data for a weekday, use overall average
+                all_amounts = list(data.values())
+                weekly_averages[i] = sum(all_amounts) / len(all_amounts) if all_amounts else 0
+
+        return weekly_averages
+
+    # Calculate trends and patterns
+    revenue_trend = calculate_trend(revenue_data)
+    expense_trend = calculate_trend(expense_data)
+
+    revenue_weekly_pattern = calculate_weekly_pattern(revenue_data)
+    expense_weekly_pattern = calculate_weekly_pattern(expense_data)  # Fixed line
+
+    # Get current balance
     current_balance = db.query(func.sum(models.Account.current_balance)).scalar() or 0
 
     forecast_days = []
@@ -311,14 +365,29 @@ def forecast_cashflow(
 
     for day in range(days):
         forecast_date = end_date + timedelta(days=day + 1)
-        running_balance += (avg_revenue - avg_expenses)
+        weekday = forecast_date.weekday()
+
+        # Base prediction on weekly pattern
+        projected_revenue = revenue_weekly_pattern[weekday]
+        projected_expenses = expense_weekly_pattern[weekday]
+
+        # Apply trend adjustment
+        projected_revenue += revenue_trend * day
+        projected_expenses += expense_trend * day
+
+        # Apply smoothing to prevent negative values
+        projected_revenue = max(0, projected_revenue)
+        projected_expenses = max(0, projected_expenses)
+
+        # Update running balance
+        running_balance += (projected_revenue - projected_expenses)
 
         forecast_days.append(
             {
                 "date": forecast_date,
-                "projected_revenue": avg_revenue,
-                "projected_expenses": avg_expenses,
-                "projected_balance": running_balance
+                "projected_revenue": round(projected_revenue, 2),
+                "projected_expenses": round(projected_expenses, 2),
+                "projected_balance": round(running_balance, 2)
             }
         )
 
