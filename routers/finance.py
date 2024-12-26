@@ -71,8 +71,40 @@ async def create_transaction(
             if not from_account or not to_account:
                 raise HTTPException(status_code=404, detail="Account not found")
 
-            from_account.current_balance -= transaction.amount
-            to_account.current_balance += transaction.amount
+            try:
+                update_query = text(
+                    """
+                        UPDATE accounts
+                        SET current_balance = CASE
+                            WHEN id = :from_account_id THEN current_balance - :amount
+                            WHEN id = :to_account_id THEN current_balance + :amount
+                        END
+                        WHERE id IN (:from_account_id, :to_account_id)
+                    """
+                    )
+
+                result = db.execute(
+                    update_query,
+                    {
+                        "from_account_id": transaction.from_account_id,
+                        "to_account_id": transaction.to_account_id,
+                        "amount": transaction.amount,
+                    },
+                )
+                if result.rowcount != 2:
+                    raise HTTPException(status_code=400, detail="Failed to update both accounts")
+
+                new_transaction = models.Transaction(
+                    id=str(uuid.uuid4()),
+                    **transaction.dict(exclude={"receipt_file"}),
+                )
+                db.add(new_transaction)
+                db.commit()
+                db.refresh(new_transaction)
+                return new_transaction
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(status_code=400, detail=str(e))
 
         elif transaction.type == models.TransactionType.EXPENSE:
             account = db.query(models.Account).filter_by(id=transaction.from_account_id).first()
