@@ -359,20 +359,6 @@ class AccountBalanceResponse(BaseModel):
     class Config:
         orm_mode = True
 
-class TransactionCategoryBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-
-class TransactionCategoryCreate(TransactionCategoryBase):
-    pass
-
-class TransactionCategoryResponse(TransactionCategoryBase):
-    id: str
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
-
 class TransactionBase(BaseModel):
     type: TransactionType
     amount: float = Field(gt=0)
@@ -534,4 +520,28 @@ class BatchTransactionCreate(BaseModel):
 
 class BatchTransactionResponse(BaseModel):
     successful: List[TransactionResponse]
-    failed: List[Dict[str, str]]  # Dict of transaction index to error message
+    failed: List[Dict[str, str]]
+
+class TransactionCategoryCreate(BaseModel):
+    name: str
+    description: Optional[str]
+
+# Response schema for category
+class TransactionCategoryResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+# Schema for usage statistics of a category
+class CategoryUsageResponse(BaseModel):
+    category_id: str
+    category_name: str
+    total_transactions: int
+    total_amount: float
+    average_amount: float
+    last_used: Optional[datetime]
+    transactions: List[dict]  # This can be further defined with a TransactionResponse schema if needed
+

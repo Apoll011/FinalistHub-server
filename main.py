@@ -4,7 +4,7 @@ from starlette.responses import Response
 
 from database import engine
 from models import Base
-from routers import events, sales, finance, meetings, auth
+from routers import categories, events, sales, finance, meetings, auth
 from dotenv import load_dotenv
 
 import os
@@ -50,3 +50,4 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(sales.router, prefix="/sales", tags=["Sales"])
 app.include_router(finance.router, prefix="/finance", tags=["Finance"])
 app.include_router(meetings.router, prefix="/meetings", tags=["Meetings"])
+app.include_router(categories.router)
