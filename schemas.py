@@ -381,7 +381,7 @@ class TransactionCreate(TransactionBase):
 class TransactionResponse(TransactionBase):
     id: str
     receipt_file: Optional[str] = None
-    reconciliation_status: bool
+    reconciliation_status: bool | None
     reconciliation_notes: Optional[str] = None
 
     class Config:
