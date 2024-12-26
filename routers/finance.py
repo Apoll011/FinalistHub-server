@@ -24,6 +24,13 @@ def create_account(
     db.refresh(new_account)
     return new_account
 
+@router.get("/accounts", response_model=List[schemas.AccountResponse])
+def get_accounts(
+        db: Session = Depends(get_db)
+):
+    accounts = db.query(models.Account).all()
+    return accounts
+
 @router.get("/accounts/{account_id}/balance", response_model=schemas.AccountBalanceResponse)
 def get_account_balance(
         account_id: str,
@@ -78,7 +85,7 @@ async def create_transaction(
                 raise HTTPException(status_code=404, detail="Account not found")
             account.current_balance -= transaction.amount
 
-        else:  # REVENUE
+        else:
             account = db.query(models.Account).filter_by(id=transaction.to_account_id).first()
             if not account:
                 raise HTTPException(status_code=404, detail="Account not found")
@@ -293,20 +300,6 @@ def forecast_cashflow(
         "starting_balance": current_balance,
         "forecast_period_days": days,
         "daily_forecasts": forecast_days
-    }
-
-@router.get("/reconciliation/pending", response_model=schemas.PendingReconciliationResponse)
-def get_pending_reconciliations(db: Session = Depends(get_db)):
-    """Get list of transactions pending reconciliation"""
-    pending_transactions = db.query(models.Transaction) \
-        .filter(models.Transaction.reconciliation_status == False) \
-        .order_by(models.Transaction.created_at.desc()) \
-        .all()
-
-    return {
-        "pending_count": len(pending_transactions),
-        "total_unreconciled_amount": sum(t.amount for t in pending_transactions),
-        "transactions": pending_transactions
     }
 
 @router.get("/accounts/transfer-history", response_model=schemas.TransferHistoryResponse)

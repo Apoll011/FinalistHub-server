@@ -70,7 +70,6 @@ class Transaction(Base):
     receipt_file = Column(String)  # Path to stored receipt file
     notes = Column(Text)
 
-    # Reconciliation
     reconciliation_status = Column(Boolean, default=False)
     reconciliation_notes = Column(Text)
 
