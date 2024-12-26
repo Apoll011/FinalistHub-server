@@ -331,3 +331,38 @@ def get_transfer_history(
         "total_amount_transferred": sum(t.amount for t in transfers),
         "transfers": transfers
     }
+
+@router.get("/profit", response_model=schemas.ProfitReportResponse)
+def get_profit_report(
+        year: int = datetime.now().year,
+        month: Optional[int] = datetime.now().month,
+        db: Session = Depends(get_db)
+):
+    """Generate profit and loss report"""
+    query = db.query(models.Transaction)
+
+    if month:
+        query = query.filter(
+            extract('year', models.Transaction.timestamp) == year,
+            extract('month', models.Transaction.timestamp) == month
+        )
+    else:
+        query = query.filter(
+            extract('year', models.Transaction.timestamp) == year
+        )
+
+    transactions = query.all()
+
+    revenue = sum(t.amount for t in transactions if t.type == schemas.TransactionType.REVENUE)
+    expenses = sum(t.amount for t in transactions if t.type == schemas.TransactionType.EXPENSE)
+
+    return {
+        "period": {
+            "year": year,
+            "month": month
+        },
+        "total_revenue": revenue,
+        "total_expenses": expenses,
+        "net_profit": revenue - expenses,
+        "profit_margin": round((revenue - expenses) / revenue * 100, 2) if revenue > 0 else 0
+    }
