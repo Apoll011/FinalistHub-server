@@ -544,5 +544,4 @@ class CategoryUsageResponse(BaseModel):
     total_amount: float
     average_amount: float
     last_used: Optional[datetime]
-    transactions: List[dict]  # This can be further defined with a TransactionResponse schema if needed
-
+    transactions: List[Any]
