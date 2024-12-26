@@ -52,7 +52,6 @@ def get_account_balance(
 @router.post("/transactions", response_model=schemas.TransactionResponse)
 async def create_transaction(
         transaction: schemas.TransactionCreate,
-        receipt: Optional[UploadFile] = File(None),
         db: Session = Depends(get_db)
 ):
     """Create a new transaction with optional receipt upload"""
@@ -63,10 +62,6 @@ async def create_transaction(
             id=str(uuid.uuid4()),
             **transaction.dict(exclude={'receipt_file'})
         )
-
-        if receipt:
-            file_path = f"receipts/{new_transaction.id}_{receipt.filename}"
-            new_transaction.receipt_file = file_path
 
         # Update account balances based on transaction type
         if transaction.type == models.TransactionType.TRANSFER:
@@ -94,7 +89,6 @@ async def create_transaction(
         db.add(new_transaction)
         db.commit()
         db.refresh(new_transaction)
-
         return new_transaction
 
     except Exception as e:

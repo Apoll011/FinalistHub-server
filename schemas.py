@@ -1,5 +1,5 @@
 from pydantic import BaseModel,Field
-from typing import List, Optional, Dict
+from typing import Any, AnyStr, List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
@@ -370,6 +370,8 @@ class TransactionBase(BaseModel):
     event_id: Optional[str] = None
     receipt_number: Optional[str] = None
     notes: Optional[str] = None
+    created_by: str
+    created_at: datetime
 
 class TransactionCreate(TransactionBase):
     pass
@@ -379,8 +381,6 @@ class TransactionResponse(TransactionBase):
     receipt_file: Optional[str] = None
     reconciliation_status: bool
     reconciliation_notes: Optional[str] = None
-    created_by: str
-    created_at: datetime
     updated_at: datetime
 
     class Config:
