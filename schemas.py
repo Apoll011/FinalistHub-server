@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel,Field
+from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
@@ -7,10 +7,6 @@ class EventStatus(str, Enum):
     active = "active"
     closed = "closed"
     cancelled = "cancelled"
-
-class TransactionType(str, Enum):
-    expense = "expense"
-    revenue = "revenue"
 
 class EventBase(BaseModel):
     name: str
@@ -122,34 +118,9 @@ class TicketSale(TicketSaleBase):
     class Config:
         orm_mode = True
 
-class FinancialTransactionBase(BaseModel):
-    description: str
-    amount: float
-
-class FinancialTransaction(FinancialTransactionBase):
-    id: str
-    type: TransactionType  # 'revenue' or 'expense'
-    timestamp: datetime
-
-    class Config:
-        orm_mode = True
-
 class Balance(BaseModel):
     current_balance: float
     last_updated: datetime
-
-class FinancialReport(BaseModel):
-    total_revenue: float
-    total_expenses: float
-    net_income: float
-    transactions: List[FinancialTransaction]
-
-class MonthlyFinancialReport(FinancialReport):
-    month: str  # Format 'YYYY-MM'
-
-class WeeklyFinancialReport(FinancialReport):
-    week_start: str  # Format 'YYYY-MM'
-    week_end: str
 
 class MeetingBase(BaseModel):
     date: str
@@ -196,14 +167,6 @@ class LowStockItemResponse(BaseModel):
 
 class InventoryAlertResponse(BaseModel):
     low_stock_items: List[LowStockItemResponse]
-
-class RevenueSourceResponse(BaseModel):
-    description: str
-    total_amount: float
-    transaction_count: int
-
-class TopRevenueSourcesResponse(BaseModel):
-    sources: List[RevenueSourceResponse]
 
 class Period(BaseModel):
     year: int
@@ -350,3 +313,225 @@ class UserLogin(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     new_password: str
+
+
+class PaymentMethod(str, Enum):
+    CASH = "cash"
+    CREDIT_CARD = "credit_card"
+    DEBIT_CARD = "debit_card"
+    BANK_TRANSFER = "bank_transfer"
+    PIX = "pix"
+    OTHER = "other"
+
+class TransactionType(str, Enum):
+    REVENUE = "revenue"
+    EXPENSE = "expense"
+    TRANSFER = "transfer"
+
+class AccountType(str, Enum):
+    BANK = "bank"
+    CASH = "cash"
+
+class AccountBase(BaseModel):
+    name: str
+    type: AccountType
+    description: Optional[str] = None
+
+class AccountCreate(AccountBase):
+    pass
+
+class AccountResponse(AccountBase):
+    id: str
+    current_balance: float
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class AccountBalanceResponse(BaseModel):
+    id: str
+    name: str
+    type: AccountType
+    current_balance: float
+    last_updated: datetime
+
+    class Config:
+        orm_mode = True
+
+class TransactionCategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class TransactionCategoryCreate(TransactionCategoryBase):
+    pass
+
+class TransactionCategoryResponse(TransactionCategoryBase):
+    id: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class TransactionBase(BaseModel):
+    type: TransactionType
+    amount: float = Field(gt=0)
+    description: Optional[str] = None
+    payment_method: Optional[PaymentMethod] = None
+    from_account_id: Optional[str] = None
+    to_account_id: Optional[str] = None
+    category_id: Optional[str] = None
+    event_id: Optional[str] = None
+    receipt_number: Optional[str] = None
+    notes: Optional[str] = None
+
+class TransactionCreate(TransactionBase):
+    pass
+
+class TransactionResponse(TransactionBase):
+    id: str
+    receipt_file: Optional[str] = None
+    reconciliation_status: bool
+    reconciliation_notes: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class TransactionReconciliation(BaseModel):
+    notes: str
+
+class FinancialTransaction(BaseModel):
+    id: str
+    type: TransactionType
+    description: str
+    amount: float
+    timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+class FinancialReport(BaseModel):
+    total_revenue: float
+    total_expenses: float
+    net_income: float
+    transactions: List[FinancialTransaction]
+
+class MonthlyFinancialReport(BaseModel):
+    month: str
+    total_revenue: float
+    total_expenses: float
+    net_income: float
+    transactions: List[TransactionResponse]
+
+class WeeklyFinancialReport(BaseModel):
+    week_start: str
+    week_end: str
+    total_revenue: float
+    total_expenses: float
+    net_income: float
+    transactions: List[TransactionResponse]
+
+class RevenueSource(BaseModel):
+    category: str
+    total_amount: float
+    transaction_count: int
+
+class TopRevenueSourcesResponse(BaseModel):
+    sources: List[RevenueSource]
+
+class StatementTransaction(BaseModel):
+    date: datetime
+    description: str
+    amount: float
+    running_balance: float
+    type: TransactionType
+    category: Optional[str]
+    reference: str
+
+class AccountStatement(BaseModel):
+    account_id: str
+    account_name: str
+    start_date: datetime
+    end_date: datetime
+    opening_balance: float
+    closing_balance: float
+    transactions: List[TransactionResponse]
+
+class CategorySpending(BaseModel):
+    category: str
+    total_amount: float
+    average_amount: float
+    transaction_count: int
+    percentage_of_total: float
+
+class CategorySpendingAnalysis(BaseModel):
+    categories: List[CategorySpending]
+    total_spending: float
+
+class DailyForecast(BaseModel):
+    date: datetime
+    projected_revenue: float
+    projected_expenses: float
+    projected_balance: float
+
+class CashflowForecast(BaseModel):
+    starting_balance: float
+    forecast_period_days: int
+    daily_forecasts: List[DailyForecast]
+
+class PendingReconciliationResponse(BaseModel):
+    pending_count: int
+    total_unreconciled_amount: float
+    transactions: List[TransactionResponse]
+
+class TransferHistoryResponse(BaseModel):
+    total_transfers: int
+    total_amount_transferred: float
+    transfers: List[TransactionResponse]
+
+class DailyRevenue(BaseModel):
+    date: str
+    revenue: float
+    expense: float
+
+# Graph and Analytics Schemas
+class TimeSeriesDataPoint(BaseModel):
+    timestamp: datetime
+    value: float
+
+class TimeSeriesData(BaseModel):
+    label: str
+    data: List[TimeSeriesDataPoint]
+
+class FinancialMetrics(BaseModel):
+    current_month_revenue: float
+    current_month_expenses: float
+    revenue_growth: float  # percentage
+    expense_growth: float  # percentage
+    profit_margin: float   # percentage
+    cash_on_hand: float
+    pending_reconciliations: int
+    largest_expense: float
+    largest_revenue: float
+
+class TransactionDistribution(BaseModel):
+    category: str
+    amount: float
+    percentage: float
+
+class FinancialDashboard(BaseModel):
+    metrics: FinancialMetrics
+    revenue_by_category: List[TransactionDistribution]
+    expenses_by_category: List[TransactionDistribution]
+    recent_transactions: List[TransactionResponse]
+    cashflow_trend: List[TimeSeriesDataPoint]
+
+class BatchTransactionCreate(BaseModel):
+    transactions: List[TransactionCreate]
+
+class BatchTransactionResponse(BaseModel):
+    successful: List[TransactionResponse]
+    failed: List[Dict[str, str]]  # Dict of transaction index to error message
