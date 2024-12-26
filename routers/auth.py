@@ -73,7 +73,7 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me")
 async def get_me(current_user: UserModel = Depends(get_current_user)):
-    return {"username": current_user.username, "role": current_user.role}
+    return {"username": current_user.username, "role": current_user.role, "id": current_user.id}
 
 @router.get("/users")
 async def get_users(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
