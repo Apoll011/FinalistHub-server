@@ -343,12 +343,12 @@ def get_profit_report(
 
     if month:
         query = query.filter(
-            extract('year', models.Transaction.timestamp) == year,
-            extract('month', models.Transaction.timestamp) == month
+            extract('year', models.Transaction.created_at) == year,
+            extract('month', models.Transaction.created_at) == month
         )
     else:
         query = query.filter(
-            extract('year', models.Transaction.timestamp) == year
+            extract('year', models.Transaction.created_at) == year
         )
 
     transactions = query.all()
