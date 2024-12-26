@@ -372,6 +372,8 @@ class TransactionBase(BaseModel):
     notes: Optional[str] = None
     created_by: str
     created_at: datetime
+    updated_at: datetime
+
 
 class TransactionCreate(TransactionBase):
     pass
@@ -381,7 +383,6 @@ class TransactionResponse(TransactionBase):
     receipt_file: Optional[str] = None
     reconciliation_status: bool
     reconciliation_notes: Optional[str] = None
-    updated_at: datetime
 
     class Config:
         orm_mode = True
