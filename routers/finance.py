@@ -50,6 +50,15 @@ def get_account_balance(
         "last_updated": account.updated_at
     }
 
+@router.get("/transactions", response_model=schemas.TransactionResponse)
+async def get_transaction(
+        transactionId: str,
+        db: Session = Depends(get_db)
+):
+    transaction = db.query(models.Transaction).filter_by(id=transactionId).first()
+
+    return transaction
+
 @router.post("/transactions", response_model=schemas.TransactionResponse)
 async def create_transaction(
         transaction: schemas.TransactionCreate,
