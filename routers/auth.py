@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
+
+import models
 from schemas import User, UserLogin, PasswordChangeRequest
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -70,6 +72,11 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Incorrect password")
     token = create_token({"sub": db_user.username, "role": db_user.role})
     return {"access_token": token, "token_type": "bearer"}
+
+@router.get("/name")
+async def get_name(user_id: str, db: Session = Depends(get_db)):
+    return db.query(models.UserModel).filter_by(id=user_id).first().username
+
 
 @router.get("/me")
 async def get_me(current_user: UserModel = Depends(get_current_user)):
