@@ -106,7 +106,7 @@ async def create_transaction(
 
                 new_transaction = models.Transaction(
                     id=str(uuid.uuid4()),
-                    **transaction.dict(exclude={"receipt_file"}),
+                    **transaction.dict(),
                 )
                 db.add(new_transaction)
                 db.commit()

@@ -67,12 +67,7 @@ class Transaction(Base):
 
     # Documentation
     receipt_number = Column(String)
-    receipt_file = Column(String)  # Path to stored receipt file
     notes = Column(Text)
-
-    #TODO: REMOVE THIS
-    reconciliation_status = Column(Boolean, default=False)
-    reconciliation_notes = Column(Text)
 
     # Audit information
     created_by = Column(String, ForeignKey("users.id"))

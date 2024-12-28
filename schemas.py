@@ -384,9 +384,6 @@ class TransactionCreate(TransactionBase):
 
 class TransactionResponse(TransactionBase):
     id: str
-    receipt_file: Optional[str] = None
-    reconciliation_status: Any
-    reconciliation_notes: Optional[str] = None
 
     class Config:
         orm_mode = True
