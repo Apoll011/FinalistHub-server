@@ -8,6 +8,8 @@ from sqlalchemy.sql import func
 from sqlalchemy import or_, and_, text
 from typing import Dict, Optional, List
 
+from routers.finance import create_transaction
+
 router = APIRouter()
 
 @router.post("/", response_model=schemas.Event)
@@ -259,12 +261,14 @@ def duplicate_event(
         "time": new_event.time
     }
 
-@router.post("/{event_id}/close" , status_code=204)
+@router.post("/event/close" , status_code=204)
 def close_event(
-        event_id: str,
+        request: schemas.CloseEventRequest,
         db: Session = Depends(get_db)
 ):
-    # Start database transaction
+    event_id = request.event_id
+    user_id = request.user_id
+    to_account_id = request.to_account_id
     try:
         event = db.query(models.Event).filter(models.Event.id == event_id).first()
         if not event:
@@ -286,6 +290,25 @@ def close_event(
 
         ticket_revenue = ticket_sales.total or 0
 
+        if ticket_revenue > 0:
+            ticket_transaction = models.Transaction(
+                id=str(uuid.uuid4()),
+                type = schemas.TransactionType.REVENUE,
+                amount = ticket_revenue,
+                description = f"Venda de Bilhetes para o Evento: {event.name}",
+                payment_method = schemas.PaymentMethod.CASH,
+                to_account_id = to_account_id,
+                event_id = event_id,
+                created_by = user_id,
+                created_at = datetime.utcnow(),
+                updated_at = datetime.utcnow()
+            )
+            account = db.query(models.Account).filter_by(id=ticket_transaction.to_account_id).first()
+            account.current_balance += ticket_transaction.amount
+            db.add(ticket_transaction)
+            db.commit()
+            db.refresh(ticket_transaction)
+
         item_sales = db.query(
             func.sum(models.Sale.total_revenue).label('total')
         ).join(
@@ -296,25 +319,24 @@ def close_event(
 
         item_revenue = item_sales.total or 0
 
-        ticket_transaction = models.Transaction(
-                id=str(uuid.uuid4()),
-                type="revenue",
-                description=f"Venda de bilhetes para o evento: {event.name}",
-                amount=ticket_revenue,
-                event_id=event_id
-            )
-        if ticket_revenue > 0:
-            db.add(ticket_transaction)
-
-        item_transaction = models.Transaction(
-                id=str(uuid.uuid4()),
-                type="revenue",
-                description=f"Venda de Items para o Evento: {event.name}",
-                amount=item_revenue,
-                event_id=event_id
-            )
         if item_revenue > 0:
+            item_transaction = models.Transaction(
+                id=str(uuid.uuid4()),
+                type = schemas.TransactionType.REVENUE,
+                amount = item_revenue,
+                description = f"Venda de Items para o Evento: {event.name}",
+                payment_method = schemas.PaymentMethod.CASH,
+                to_account_id = to_account_id,
+                event_id = event_id,
+                created_by = user_id,
+                created_at = datetime.utcnow(),
+                updated_at = datetime.utcnow()
+            )
+            account = db.query(models.Account).filter_by(id=item_transaction.to_account_id).first()
+            account.current_balance += item_transaction.amount
             db.add(item_transaction)
+            db.commit()
+            db.refresh(item_transaction)
 
         event.status = schemas.EventStatus.closed
         event.closed_at = datetime.utcnow()

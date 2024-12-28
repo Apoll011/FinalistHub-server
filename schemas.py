@@ -374,6 +374,10 @@ class TransactionBase(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class CloseEventRequest(BaseModel):
+    event_id: str
+    user_id: str
+    to_account_id: str
 
 class TransactionCreate(TransactionBase):
     created_by: str

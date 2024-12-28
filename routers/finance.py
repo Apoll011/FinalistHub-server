@@ -70,7 +70,7 @@ async def create_transaction(
     try:
         new_transaction = models.Transaction(
             id=str(uuid.uuid4()),
-            **transaction.dict(exclude={'receipt_file'})
+            **transaction.dict()
         )
 
         # Update account balances based on transaction type
