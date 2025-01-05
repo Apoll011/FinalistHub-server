@@ -1,5 +1,5 @@
 from pydantic import BaseModel,Field
-from typing import Any, AnyStr, List, Optional, Dict
+from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
@@ -537,7 +537,6 @@ class TransactionCategoryResponse(BaseModel):
     class Config:
         orm_mode = True
 
-# Schema for usage statistics of a category
 class CategoryUsageResponse(BaseModel):
     category_id: str
     category_name: str
@@ -546,3 +545,71 @@ class CategoryUsageResponse(BaseModel):
     average_amount: float
     last_used: Optional[datetime]
     transactions: List[TransactionResponse]
+
+class ItemStatus(str, Enum):
+    active = "active"
+    closed = "closed"
+
+class StandaloneItemBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    quantity: int
+
+class StandaloneItemCreate(StandaloneItemBase):
+    pass
+
+class StandaloneItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    quantity: Optional[int] = None
+
+class StandaloneItem(StandaloneItemBase):
+    id: str
+    status: ItemStatus
+    closed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class StandaloneItemSaleCreate(BaseModel):
+    quantity: int
+    payment_method: PaymentMethod
+
+class StandaloneItemSale(BaseModel):
+    id: str
+    item_id: str
+    quantity: int
+    total_amount: float
+    payment_method: PaymentMethod
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class CloseItemRequest(BaseModel):
+    user_id: str
+    to_account_id: str
+
+class SalesByPaymentMethod(BaseModel):
+    method: PaymentMethod
+    amount: float
+
+class SalesSummary(BaseModel):
+    total_quantity_sold: int
+    total_revenue: float
+    sales_by_payment_method: List[SalesByPaymentMethod]
+
+class StandaloneItemReport(BaseModel):
+    item_id: str
+    name: str
+    status: ItemStatus
+    current_quantity: int
+    price: float
+    sales_summary: SalesSummary
+
+    class Config:
+        orm_mode = True

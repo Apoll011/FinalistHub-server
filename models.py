@@ -1,6 +1,8 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime, Text, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime
+
+import schemas
 from database import Base
 from enum import Enum as PyEnum
 
@@ -187,3 +189,30 @@ class TicketSale(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     ticket = relationship("Ticket", backref="sales")
+
+class StandaloneItem(Base):
+    __tablename__ = "standalone_items"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    status = Column(Enum(schemas.ItemStatus), nullable=False)
+    closed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sales = relationship("StandaloneItemSale", back_populates="item")
+
+class StandaloneItemSale(Base):
+    __tablename__ = "standalone_item_sales"
+
+    id = Column(String, primary_key=True, index=True)
+    item_id = Column(String, ForeignKey("standalone_items.id"))
+    quantity = Column(Integer, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    payment_method = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    item = relationship("StandaloneItem", back_populates="sales")
