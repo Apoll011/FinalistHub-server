@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - '5173:80'  # Standard port for development
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true  # Better hot reload support in Docker
+    volumes:
+      - ./client:/app          # For development hot-reloading
+      - /app/node_modules      # Prevents overwriting container node_modules
+    depends_on:
+      - server                 # Ensures server starts first
+    #command: npm start
+    command: nginx -g "daemon off;"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+        - ./server:/app
+    ports:
+      - '8000:8000'  # Using standard port
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
