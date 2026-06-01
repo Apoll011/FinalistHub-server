@@ -2,6 +2,8 @@
 
 ## Setup & Running
 
+This is the backend server for FinalistHub. The frontend client is available at: https://github.com/Apoll011/FinalistHub-client
+
 ### Quick Start with Helper Script
 
 **Test Mode** (recommended for development):
@@ -21,7 +23,7 @@ Run both server and client with SQLiteCloud database:
 ```bash
 docker-compose up
 ```
-- **Client**: http://localhost:5173
+- **Client**: http://localhost:5173 (cloned from GitHub)
 - **Server API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 
