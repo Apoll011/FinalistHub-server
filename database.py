@@ -1,10 +1,16 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
-SQLALCHEMY_DATABASE_URL = "sqlitecloud://clusjlcsnk.sqlite.cloud:8860/finalisthub-dev.sqlite?apikey=0OfGmBouwcdis72EcBahqeXVbwvlybWr7cGtaJsMfSw"
+db_type = os.getenv("DB_TYPE", "sqlite")
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+if db_type == "sqlite":
+    SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL", "sqlite:///./finalisthub.db")
+else:
+    SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL", "sqlitecloud://clusjlcsnk.sqlite.cloud:8860/finalisthub-dev.sqlite?apikey=0OfGmBouwcdis72EcBahqeXVbwvlybWr7cGtaJsMfSw")
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False} if db_type == "sqlite" else {})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -16,3 +22,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

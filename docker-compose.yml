@@ -3,27 +3,21 @@ version: '3.8'
 services:
   client:
     build:
-      context: ./client
+      context: https://github.com/Apoll011/FinalistHub-client.git
       dockerfile: Dockerfile
     ports:
-      - '5173:80'  # Standard port for development
-    environment:
-      - NODE_ENV=development
-      - WATCHPACK_POLLING=true  # Better hot reload support in Docker
-    volumes:
-      - ./client:/app          # For development hot-reloading
-      - /app/node_modules      # Prevents overwriting container node_modules
+      - '5173:80'
     depends_on:
-      - server                 # Ensures server starts first
-    #command: npm start
-    command: nginx -g "daemon off;"
+      - server
 
   server:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
     volumes:
-        - ./server:/app
+      - ./finalisthub.db:/app/finalisthub.db
     ports:
-      - '8000:8000'  # Using standard port
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - '8000:8000'
+    env_file:
+      - .env
+    command: ${COMMAND:-uvicorn main:app --host 0.0.0.0 --port 8000}

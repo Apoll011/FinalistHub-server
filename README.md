@@ -1,5 +1,50 @@
 # Events Management API Documentation
 
+## Setup & Running
+
+### Quick Start with Helper Script
+
+**Test Mode** (recommended for development):
+```bash
+./run.sh --test
+```
+
+**Production Mode**:
+```bash
+./run.sh
+```
+
+The helper script handles environment configuration and provides clear information about your mode.
+
+### Docker Compose - Production Mode
+Run both server and client with SQLiteCloud database:
+```bash
+docker-compose up
+```
+- **Client**: http://localhost:5173
+- **Server API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+
+### Docker Compose - Test Mode
+Run with local SQLite database and default admin user (username: `admin`, password: `admin`):
+```bash
+docker-compose --env-file .env.test up
+```
+- **Client**: http://localhost:5173
+- **Server API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Default Admin**: username=`admin`, password=`admin`
+
+### Local Development
+```bash
+cp .env.example .env
+pip install -r requirements.txt
+python init_db.py
+uvicorn main:app --reload
+```
+
+---
+
 ## 1. Events
 
 ### 1.1 Create Events (Admin Only)
