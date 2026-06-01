@@ -18,6 +18,16 @@ This is the backend server for FinalistHub. The frontend client is available at:
 
 The helper script handles environment configuration and provides clear information about your mode.
 
+### Creating an Admin User
+
+1. Go to the sign-up page at: http://localhost:5173/auth/sign-up
+2. Fill in your username and password
+3. Check the checkbox: **"É um Administrador?"** (Are you an admin?)
+4. Enter the admin password when prompted
+5. Complete the registration
+
+You now have an admin account and can log in with your credentials.
+
 ### Docker Compose - Production Mode
 Run both server and client with SQLiteCloud database:
 ```bash
@@ -30,15 +40,18 @@ docker-compose up
 - **Server API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 
+After starting, create an admin user via the sign-up page.
+
 ### Docker Compose - Test Mode
-Run with local SQLite database and default admin user (username: `admin`, password: `admin`):
+Run with local SQLite database:
 ```bash
 docker-compose --env-file .env.test up
 ```
 - **Client**: http://localhost:5173
 - **Server API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
-- **Default Admin**: username=`admin`, password=`admin`
+
+After starting, create an admin user via the sign-up page.
 
 ### Local Development
 ```bash
@@ -46,8 +59,12 @@ cp .env.example .env
 # Edit .env and set SQLALCHEMY_DATABASE_URL for production, or leave empty for test mode
 pip install -r requirements.txt
 python init_db.py
+
+# Run server
 uvicorn main:app --reload
 ```
+
+Then create admin users via the client UI.
 
 ---
 
