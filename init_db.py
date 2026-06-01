@@ -6,7 +6,7 @@ import os
 def init_db():
     Base.metadata.create_all(bind=engine)
 
-    test_mode = os.getenv("TEST_MODE", "false").lower() == "true"
+    test_mode = os.getenv("TEST", "false").lower() == "true"
 
     db = SessionLocal()
     try:
@@ -29,4 +29,5 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
+
 

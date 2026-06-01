@@ -11,7 +11,7 @@ This is the backend server for FinalistHub. The frontend client is available at:
 ./run.sh --test
 ```
 
-**Production Mode**:
+**Production Mode** (requires SQLALCHEMY_DATABASE_URL in .env):
 ```bash
 ./run.sh
 ```
@@ -21,6 +21,9 @@ The helper script handles environment configuration and provides clear informati
 ### Docker Compose - Production Mode
 Run both server and client with SQLiteCloud database:
 ```bash
+# Set your database URL
+export SQLALCHEMY_DATABASE_URL=sqlitecloud://your-api-key@your-endpoint:8860/your-database.sqlite
+
 docker-compose up
 ```
 - **Client**: http://localhost:5173 (cloned from GitHub)
@@ -40,6 +43,7 @@ docker-compose --env-file .env.test up
 ### Local Development
 ```bash
 cp .env.example .env
+# Edit .env and set SQLALCHEMY_DATABASE_URL for production, or leave empty for test mode
 pip install -r requirements.txt
 python init_db.py
 uvicorn main:app --reload
