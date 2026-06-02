@@ -23,7 +23,7 @@ The helper script handles environment configuration and provides clear informati
 1. Go to the sign-up page at: http://localhost:5173/auth/sign-up
 2. Fill in your username and password
 3. Check the checkbox: **"É um Administrador?"** (Are you an admin?)
-4. Enter the admin password when prompted
+4. Enter the admin password when prompted (password is: eicm24/25)
 5. Complete the registration
 
 You now have an admin account and can log in with your credentials.

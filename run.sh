@@ -39,7 +39,7 @@ if [ "$TEST_MODE" = true ]; then
     print_info "Server: http://localhost:8000"
     print_info "API Docs: http://localhost:8000/docs"
     echo ""
-    docker-compose --env-file .env.test up $COMPOSE_ARGS
+    docker compose --env-file .env.test up $COMPOSE_ARGS
 else
     print_header "🚀 PRODUCTION MODE - SQLiteCloud"
     print_info "Database: SQLiteCloud"
@@ -47,6 +47,6 @@ else
     print_info "Server: http://localhost:8000"
     print_info "API Docs: http://localhost:8000/docs"
     echo ""
-    docker-compose up $COMPOSE_ARGS
+    docker compose up $COMPOSE_ARGS
 fi
 
