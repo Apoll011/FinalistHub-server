@@ -20,6 +20,8 @@ The helper script handles environment configuration and provides clear informati
 
 ### Creating an Admin User
 
+Or use admin / admin for an Adminisrator account or test / test, for a non Admim account during test mode
+
 1. Go to the sign-up page at: http://localhost:5173/auth/sign-up
 2. Fill in your username and password
 3. Check the checkbox: **"É um Administrador?"** (Are you an admin?)

@@ -14,7 +14,6 @@ def sell_stock_item(
         sale: schemas.SaleCreate,
         db: Session = Depends(get_db)
 ):
-    print("Hi")
     db_item = db.query(models.Item).filter(models.Item.id == sale.item_id).first()
     if not db_item:
         print("Hello", sale.item_id)

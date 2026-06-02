@@ -15,6 +15,7 @@ from models import UserModel
 
 SECRET_KEY =  os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -48,8 +49,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")
+    except jwt.PyJWTError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate token {e}")
 
 # Routes
 @router.post("/register", status_code=status.HTTP_201_CREATED)

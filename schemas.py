@@ -1,5 +1,5 @@
 from pydantic import BaseModel,Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from datetime import datetime
 from enum import Enum
 
@@ -288,9 +288,9 @@ class ItemSales(BaseModel):
     details: List[ItemSaleDetail]
 
 class EventFinancialReport(BaseModel):
-     ticket_revenue: int
-     item_revenue: int
-     total_revenue: int
+     ticket_revenue: Union[int, float]
+     item_revenue: Union[int, float]
+     total_revenue: Union[int, float]
 
 class EventReportResponse(BaseModel):
     event_id: str
